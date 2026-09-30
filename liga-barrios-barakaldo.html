@@ -1611,7 +1611,7 @@ function movePlayers(dt){
       else if(p.goal)t=p.goal;
       else if(!(p.ti===0&&!M.sim&&M.ball.owner===p))t=homePos(p);
       if(t){const d=dist(p.x,p.y,t[0],t[1]);if(d>=1){dx=(t[0]-p.x)/d;dy=(t[1]-p.y)/d;want=Math.min(sp,d*7);}}}
-    const a=Math.min(1,dt*(p===M.ctrl?(kb?30:16):10)); // el tuyo responde al instante: sin retardo respecto al ratónp.vx+=(dx*want-p.vx)*a;p.vy+=(dy*want-p.vy)*a;
+    const a=Math.min(1,dt*(p===M.ctrl?(kb?30:16):10)); p.vx+=(dx*want-p.vx)*a;p.vy+=(dy*want-p.vy)*a; // el tuyo responde al instante: sin retardo respecto al ratón
     if(!M.sim&&p.ti===0)M.pl.forEach(q=>{if(q===p||q.ti!==p.ti||q.s===0)return;const d=dist(p.x,p.y,q.x,q.y);if(d>0&&d<sep){const k=(sep-d)/sep*30*SPF;p.vx+=(p.x-q.x)/d*k*dt*6;p.vy+=(p.y-q.y)/d*k*dt*6;}});
     p.x=clamp(p.x+p.vx*dt,3,FW-3);p.y=clamp(p.y+p.vy*dt,3,FL-3);
     const s2=Math.hypot(p.vx,p.vy);if(s2>4){p.mvT=.12;const vx=dirS2V(p.vx,p.vy)[0];if(Math.abs(vx)>2)p.fx=vx>0?1:-1;}
