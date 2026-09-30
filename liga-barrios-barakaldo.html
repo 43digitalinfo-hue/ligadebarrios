@@ -1089,6 +1089,10 @@ function drawWorld(){
   for(let y=y0;y<=y1+1&&y<WW;y++)for(let x=x0;x<=x1;x++){const t=MAP[y][x];if(t==="T"||t==="l"||isB(t))overlay(t,x,y,zoneAt(x,y),x*16-cx,y*16-cy);}
   GULLS.forEach(([gx,gy],i)=>{const t=frame/60,x=gx*16+Math.sin(t*.4+i*2)*50-cx,y=gy*16+Math.cos(t*.6+i)*14-cy-10;if(x<-10||x>W+10||y<-10||y>H+10)return;
     const f=(frame>>3)%2;ctx.fillStyle="#f2f2f2";ctx.fillRect(x,y,3,2);ctx.fillStyle="#8a8f99";ctx.fillRect(x-3,y-f,3,1);ctx.fillRect(x+3,y-f,3,1);ctx.fillStyle="#f5c030";ctx.fillRect(x+3,y+1,1,1);});
+  // Luz del barrio según la hora; de noche alumbran las farolas cercanas y un halo alrededor tuyo (farolillo).
+  {const fl=[];for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(MAP[y][x]==="l")fl.push([x*16-cx+9,y*16-cy-1]);const pc=[ppx-cx+8,ppy-cy+6];fl.sort((a,b)=>Math.hypot(a[0]-pc[0],a[1]-pc[1])-Math.hypot(b[0]-pc[0],b[1]-pc[1]));
+    postFx({lamps:[[pc[0]/W,pc[1]/H,.55],...fl.slice(0,7).map(([a,b])=>[a/W,(b+10)/H,1])],skyH:0,lk:160,lw:.95,base:.5});
+    const n=light().night;if(n>.3){const k=(n-.3)/.7;ctx.globalCompositeOperation="lighter";fl.forEach(([a,b])=>{ctx.fillStyle=`rgba(255,243,176,${k})`;ctx.fillRect(a-2,b-1,4,2);const g=ctx.createRadialGradient(a,b,0,a,b,14);g.addColorStop(0,`rgba(255,230,150,${.45*k})`);g.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.fillRect(a-14,b-14,28,28);});ctx.globalCompositeOperation="source-over";}}
   if(banner){const a=Math.min(1,banner.f/20),bw=Math.min(W-20,140);ctx.globalAlpha=a;ctx.fillStyle="#1d1b26cc";ctx.fillRect((W-bw)/2,SAFE.t+30,bw,18);ctx.fillStyle="#e9b949";ctx.fillRect((W-bw)/2,SAFE.t+30,bw,1);ctx.fillRect((W-bw)/2,SAFE.t+47,bw,1);txt(banner.t,W/2,SAFE.t+43,"#e9b949",11,"center");ctx.globalAlpha=1;if(--banner.f<=0)banner=null;}
 }
 // ================= INTERFAZ =================
@@ -1409,16 +1413,16 @@ function skyStrip(W2){const im=SPRI.bg_sky;if(!im)return null;const key=skyKey()
 // Pasada sobre el mundo ya dibujado (antes del HUD): luz ambiente de la hora, luz direccional suave desde el lado del sol,
 // de noche los 4 focos del estadio (charcos de luz), bloom en lo brillante, gradación de color y viñeta.
 // WebGL si hay; si no, el mismo efecto aproximado con modos de fusión 2D.
-const POST={gl:null,c:null,ok:null};
-const POST_FS=`precision mediump float;varying vec2 uv;uniform sampler2D t;uniform vec2 px;uniform vec3 amb,sunC;uniform vec2 sunD;uniform float night,gold,skyH,asp;uniform vec2 L0,L1,L2,L3;
-float lamp(vec2 p){vec2 d=(uv-p)*vec2(asp,1.);return exp(-dot(d,d)*2.6)*.85;}
+const POST={gl:null,c:null,ok:null};const NOFX=(()=>{try{return new URLSearchParams(location.search).has("nofx");}catch(e){return false;}})();
+const POST_FS=`precision mediump float;varying vec2 uv;uniform sampler2D t;uniform vec2 px;uniform vec3 amb,sunC;uniform vec2 sunD;uniform float night,gold,skyH,asp,lk,lw,base;uniform vec3 LL[8];uniform int nL;
+float lamp(vec3 p){vec2 d=(uv-p.xy)*vec2(asp,1.);return exp(-dot(d,d)*lk)*lw*p.z;}
 void main(){vec3 c=texture2D(t,uv).rgb,b=vec3(0.);
   for(int i=0;i<8;i++){float a=float(i)*.785398;vec2 o=vec2(cos(a),sin(a))*px;b+=max(texture2D(t,uv+o*2.5).rgb-.72,0.)+max(texture2D(t,uv+o*5.5).rgb-.72,0.)*.6;}
   b/=8.;vec3 o=c;
   if(uv.y>skyH){float side=dot((uv-.5)*vec2(asp,1.),sunD);
     vec3 day=c*amb*(1.+(.14+.14*gold)*side)+sunC*.1*gold*max(side,0.);
-    float pool=lamp(L0)+lamp(L1)+lamp(L2)+lamp(L3);
-    vec3 nit=c*(vec3(.2,.23,.4)+min(pool,1.1)*vec3(.92,.95,1.));
+    float pool=0.;for(int i=0;i<8;i++){if(i>=nL)break;pool+=lamp(LL[i]);}
+    vec3 nit=c*(vec3(.5,.58,1.)*base+min(pool,1.1)*vec3(.92,.95,1.));
     o=mix(day,nit,night);}
   o+=b*(.35+.6*night);
   float l=dot(o,vec3(.299,.587,.114));o=mix(vec3(l),o,1.08+.1*(1.-night));o=(o-.5)*1.05+.5;
@@ -1431,8 +1435,8 @@ function postInit(){if(POST.ok!==null)return POST.ok;POST.ok=false;if(window.__n
   if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw gl.getProgramInfoLog(p);gl.useProgram(p);
   gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);const a=gl.getAttribLocation(p,"a");gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
   gl.bindTexture(gl.TEXTURE_2D,gl.createTexture());[gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER].forEach(k=>gl.texParameteri(gl.TEXTURE_2D,k,gl.NEAREST));[gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T].forEach(k=>gl.texParameteri(gl.TEXTURE_2D,k,gl.CLAMP_TO_EDGE));
-  POST.U={};["t","px","amb","sunC","sunD","night","gold","skyH","asp","L0","L1","L2","L3"].forEach(n=>POST.U[n]=gl.getUniformLocation(p,n));
-  POST.gl=gl;POST.c=c;POST.ok=true;}catch(e){POST.ok=false;}return POST.ok;}
+  POST.U={};["t","px","amb","sunC","sunD","night","gold","skyH","asp","lk","lw","base","nL"].forEach(n=>POST.U[n]=gl.getUniformLocation(p,n));
+  POST.gl=gl;POST.c=c;POST.p=p;POST.ok=true;}catch(e){POST.ok=false;}return POST.ok;}
 // Parámetros de luz de la pasada (ambiente de día sin la parte nocturna: la noche la ponen los focos).
 function postParams(){const L=light(),Z=ZM,f=(x,y)=>{const[a,b]=V(x,y),[c,d]=V(FW/2,FL/2),e=(a-c)*Z,g=(b-d)*Z,k=12;return[clamp((c*Z+e+Math.sign(e)*k)/W,10/W,1-10/W),clamp((d*Z+g+Math.sign(g)*k)/H,(SKY*Z+8)/H,1-10/H)];},m=0;
   return{amb:hex(mixC("#ffffff","#ffb878",L.gold)).map(v=>v/255),sunC:hex(L.col).map(v=>v/255),sunD:[L.l[0],L.l[1]],night:L.night,gold:L.gold*(1-L.night),skyH:SKY*Z/H,
@@ -1441,15 +1445,16 @@ function postParams(){const L=light(),Z=ZM,f=(x,y)=>{const[a,b]=V(x,y),[c,d]=V(F
 function drawFloods(){const P=postParams(),n=P.night,on=n>.3;ctx.save();ctx.setTransform(1,0,0,1,0,0);
   P.lamps.forEach(([u,v])=>{const x=Math.round(u*W),y=Math.round(v*H);ctx.fillStyle="#1d1b26";ctx.fillRect(x-7,y-4,14,8);ctx.fillStyle=on?"#eef4ff":"#6b7184";for(let i=0;i<3;i++)for(let j=0;j<2;j++)ctx.fillRect(x-6+i*4,y-3+j*3+1,3,2);
     if(on){ctx.globalCompositeOperation="lighter";const r=26,g=ctx.createRadialGradient(x,y,0,x,y,r),k=(n-.3)/.7;g.addColorStop(0,`rgba(220,230,255,${.7*k})`);g.addColorStop(.25,`rgba(160,180,255,${.25*k})`);g.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);ctx.globalCompositeOperation="source-over";}});ctx.restore();}
-function postFx(){if(new URLSearchParams(location.search).has("nofx"))return;const P=postParams();
+// o: lamps (4 posiciones uv), skyH, lk (caída del charco de luz), lw (peso), base (luz de noche sin focos)
+function postFx(o){if(NOFX)return;const P=Object.assign(postParams(),{lk:2.6,lw:.85,base:.4},o||{});
   if(postInit()){const gl=POST.gl,c=POST.c,U=POST.U;if(c.width!==cv.width||c.height!==cv.height){c.width=cv.width;c.height=cv.height;gl.viewport(0,0,c.width,c.height);}
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv);gl.uniform1i(U.t,0);gl.uniform2f(U.px,1/c.width,1/c.height);gl.uniform3fv(U.amb,P.amb);gl.uniform3fv(U.sunC,P.sunC);gl.uniform2fv(U.sunD,P.sunD);
-    gl.uniform1f(U.night,P.night);gl.uniform1f(U.gold,P.gold);gl.uniform1f(U.skyH,P.skyH);gl.uniform1f(U.asp,c.width/c.height);P.lamps.forEach((l,i)=>gl.uniform2fv(U["L"+i],l));
+    gl.uniform1f(U.night,P.night);gl.uniform1f(U.gold,P.gold);gl.uniform1f(U.skyH,P.skyH);gl.uniform1f(U.asp,c.width/c.height);gl.uniform1f(U.lk,P.lk);gl.uniform1f(U.lw,P.lw);gl.uniform1f(U.base,P.base);const LA=new Float32Array(24);P.lamps.slice(0,8).forEach((l,i)=>{LA[i*3]=l[0];LA[i*3+1]=l[1];LA[i*3+2]=l[2]==null?1:l[2];});gl.uniform3fv(gl.getUniformLocation(POST.p,"LL"),LA);gl.uniform1i(U.nL,Math.min(8,P.lamps.length));
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(c,0,0);ctx.restore();return;}
   // Respaldo 2D
   const y0=Math.round(P.skyH*H),h=H-y0;ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.globalCompositeOperation="multiply";
-  ctx.fillStyle=mixC(mixC("#ffffff","#ffb878",light().gold*.55),"#4a5484",P.night);ctx.fillRect(0,y0,W,h);
-  if(P.night>0){ctx.globalCompositeOperation="lighter";P.lamps.forEach(([u,v])=>{const x=u*W,y=v*H,r=H*.55,g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(130,135,150,${.7*P.night})`);g.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.fillRect(0,y0,W,h);});}
+  ctx.fillStyle=mixC(mixC("#ffffff","#ffb878",light().gold*.55),mixC("#000000","#94a8ff",P.base),P.night);ctx.fillRect(0,y0,W,h);
+  if(P.night>0){ctx.globalCompositeOperation="lighter";P.lamps.forEach(([u,v,w])=>{const x=u*W,y=v*H,r=H*1.4/Math.sqrt(P.lk),g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(130,135,150,${.82*P.lw*(w==null?1:w)*P.night})`);g.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.fillRect(0,y0,W,h);});}
   ctx.globalCompositeOperation="source-over";const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.75);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,.28)");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.restore();}
 // ================= PARTIDO EN TIEMPO REAL =================
 // Coordenadas de simulación: x = ancho (0..FW), y = largo (0..FL); el equipo 0 ataca hacia y = 0.
