@@ -1344,6 +1344,35 @@ function dupFuse(f,t){
 function plate(c,y,al,dup){const w=Math.min(W*.62,140);const X=al==="r"?W-w-6:6;ctx.fillStyle="rgba(239,227,200,.92)";ctx.fillRect(X,y,w,28);ctx.fillStyle="#1d1b26";ctx.fillRect(X,y,w,2);ctx.fillRect(X,y+26,w,2);ctx.fillRect(X,y,2,28);ctx.fillRect(X+w-2,y,2,28);ctx.fillStyle=DATA.tcol[cType(c)];ctx.fillRect(X+2,y+2,3,24);
   txt(`${cName(c)}${rarTxt(c)}`,X+8,y+13,"#1d1b26",10,"left","none",20);txt(`Nv${c.lvl}`,X+w-6,y+13,"#1d1b26",9,"right","none",18);txt(cType(c)+" · "+SPD(c).r,X+8,y+24,"#46305e",7,"left","none",14);
   if(dup){ctx.fillStyle="#1d1b26";ctx.fillRect(X,y+28,52,11);ctx.fillStyle="#e9b949";ctx.fillRect(X+1,y+28,50,10);txt("YA LA TIENES",X+26,y+36,"#1d1b26",5,"center","none",11);}}
+// ================= LUZ (hora del día) =================
+// El sol sale a las 7 por la izquierda (este), a mediodía está alto por arriba y se pone a las 21 por la derecha.
+// LT.l = dirección hacia el sol en la vista (las sombras van al revés), LT.len = largo de sombra por px de altura,
+// LT.col = color de la luz, LT.amb = tinte ambiente (se multiplica), LT.night = 0..1 (focos encendidos por encima de ~.3).
+// La hora es la del reloj del jugador; ?hora=19.5 en la URL la fija (para probar).
+const HORA_URL=(()=>{try{const v=new URLSearchParams(location.search).get("hora");return v==null||v===""?null:+v;}catch(e){return null;}})();
+let LT=null,LTh=-1;
+function hourNow(){if(HORA_URL!=null&&isFinite(HORA_URL))return((HORA_URL%24)+24)%24;const d=new Date();return d.getHours()+d.getMinutes()/60;}
+function mixC(a,b,k){const p=hex(a),q=hex(b);return"#"+[0,1,2].map(i=>Math.round(p[i]+(q[i]-p[i])*k).toString(16).padStart(2,"0")).join("");}
+function lightAt(h){
+  const t=(h-7)/14,up=t>0&&t<1,el=up?Math.sin(Math.PI*t):0; // elevación 0..1
+  // noche: 0 de día, 1 de noche cerrada; transición de 45 min en el ocaso y el alba
+  const night=h>=21.75||h<6.25?1:h>=21?(h-21)/.75:h<7?(7-h)/.75:0;
+  const gold=up?clamp(1-el/.6,0,1):1; // luz dorada cerca del horizonte
+  const ax=up?-Math.cos(Math.PI*t):0,l=[ax,-.55],ln=Math.hypot(l[0],l[1]);
+  const col=night>.5?"#9fb4ff":mixC("#fff6e6","#ffae62",gold),amb=mixC(mixC("#ffffff","#ffd9b8",gold*.8),"#4a5a8c",night);
+  return{h,el,night,gold,l:[l[0]/ln,l[1]/ln],len:up?clamp(.35+(1-el)*1.6,.35,1.9):.5,col,amb,sh:up?.34*(1-night)+.08:.18};}
+function light(){const h=Math.round(hourNow()*12)/12;if(h!==LTh){LTh=h;LT=lightAt(h);}return LT;}
+// Silueta negra de un sprite (caché por imagen) para las sombras proyectadas.
+const SILC=new WeakMap();
+function silImg(im){let o=SILC.get(im);if(o)return o;o=mkC(im.width,im.height);const g=o.getContext("2d");g.drawImage(im,0,0);g.globalCompositeOperation="source-in";g.fillStyle="#000";g.fillRect(0,0,o.width,o.height);SILC.set(im,o);return o;}
+// Vector de sombra (px de vista por px de altura) de una fuente de luz con dirección l y largo len.
+const shadowV=(l,len)=>[-l[0]*len,-l[1]*len];
+// Sombra proyectada de un sprite cuyos pies están en (fx,fy): la silueta se inclina en la dirección de la sombra.
+// (u,w) del sprite → (u - w·sx, -w·sy) respecto a los pies: la cabeza cae lejos, los pies se quedan pegados.
+function castShadow(im,fx,fy,ox,oy,flip,sv,a){if(a<=.01)return;ctx.save();ctx.globalAlpha=a;ctx.translate(Math.round(fx),Math.round(fy));ctx.transform(1,0,-sv[0],-sv[1],0,0);if(flip)ctx.scale(-1,1);ctx.drawImage(silImg(im),ox,oy);ctx.restore();}
+// Fuentes de luz del partido: el sol (o la luna) y, de noche, los 4 focos de las esquinas (sombras cortas en 4 direcciones).
+function lightsNow(){const L=light(),out=[];if(L.night<1)out.push({sv:shadowV(L.l,L.len),a:L.sh*(1-L.night)});
+  if(L.night>.3){const k=(L.night-.3)/.7;[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>{const n=Math.SQRT1_2;out.push({sv:shadowV([a*n,b*n],.45),a:.16*k});});}return out;}
 // ================= PARTIDO EN TIEMPO REAL =================
 // Coordenadas de simulación: x = ancho (0..FW), y = largo (0..FL); el equipo 0 ataca hacia y = 0.
 // La vista es vertical (móvil en vertical) u horizontal (ordenador o móvil girado, el equipo 0 ataca hacia la derecha).
@@ -1881,11 +1910,13 @@ function matchResults(){
 // ---- Dibujo ----
 // Tema de cada supertécnica → efecto PixelLab que la acompaña en la cinemática.
 const KFX={humo:"humo",tinta:"humo",sombra:"humo",fuego:"fuego",chispas:"rayo",luz:"destello",rayas:"destello",tipo:"destello",spray:"agua",ola:"agua",roca:"impacto",acero:"impacto",hormigon:"onda",sonido:"onda",hoja:"hojas",madera:"hojas",lana:"polvo",viento:"polvo",ruedas:"polvo"};
-function drawBall(x,y,z,rot){pxEll(x,y+1,3,1,`rgba(0,0,0,${.35-Math.min(.2,z/40)})`);ctx.drawImage(ballImg(Math.floor(rot||0)%4),Math.round(x-4),Math.round(y-z-5));}
+function drawBall(x,y,z,rot){lightsNow().forEach(({sv,a})=>pxEll(x+z*sv[0],y+1+z*sv[1],3,1,`rgba(0,0,0,${Math.min(.5,a*1.3)-Math.min(.15,z/60)})`));ctx.drawImage(ballImg(Math.floor(rot||0)%4),Math.round(x-4),Math.round(y-z-5));}
 function blit(img,x,y,flip,rot){const h=img.width/2;ctx.save();ctx.translate(Math.round(x)+h,Math.round(y)+h);if(rot)ctx.rotate(rot);if(flip)ctx.scale(-1,1);ctx.drawImage(img,-h,-h);ctx.restore();}
 // Portería (malla, postes y red que se hincha con el gol). gi 0 = la de arriba del campo en simulación (y = 0), 1 = y = FL.
+let GSH=0; // 1 = dibujar la portería como sombra (todo negro)
+function drawFlagShadows(sv,a){ctx.fillStyle=`rgba(0,0,0,${a})`;[[0,0],[FW,0],[0,FL],[FW,FL]].forEach(([x,y])=>{const[p,q]=V(x,y);for(let i=0;i<8;i++)ctx.fillRect(Math.round(p+i*sv[0]),Math.round(q+i*sv[1]),1,1);ctx.fillRect(Math.round(p+7*sv[0]),Math.round(q+7*sv[1]),3,2);});}
 function drawGoal(gi){
-  const o=gi?1:-1,y0=gi?FL:0,dep=8,bul=M.net[gi]*4*(1+Math.sin(M.rt*40)*.3),S=(c,x,y,w,h)=>sRect(ctx,c,x,y,w,h);
+  const o=gi?1:-1,y0=gi?FL:0,dep=8,bul=M.net[gi]*4*(1+Math.sin(M.rt*40)*.3),S=(c,x,y,w,h)=>sRect(ctx,GSH?"#000":c,x,y,w,h);
   S("rgba(0,0,0,.28)",GX0,gi?FL:-dep-1,GX1-GX0+2,dep+1);
   for(let x=GX0;x<=GX1;x+=2)for(let d=1;d<=dep;d+=2){const b=d/dep*bul*(1-Math.abs(x-(GX0+GX1)/2)/((GX1-GX0)/2+1));S("rgba(223,230,232,.55)",x,y0+o*(d+b),1,1);}
   const back=y0+o*(dep+bul*.8);S("#dfe6e8",GX0,Math.min(back,back+o),GX1-GX0+1,1);
@@ -1933,7 +1964,8 @@ function matchDraw(){
   ctx.drawImage(PITCH,0,0);if(CROWD)ctx.drawImage(CROWD[((M.cel||M.state==="intro")&&(frame>>3)%2)||(frame>>4)%11===0?1:0],0,0);
   drawBoards(M.rt,Z);
   if(M.state==="pens"){ctx.restore();drawPens();drawTxema();return;}
-  drawRainUnder();drawGoal(0);drawGoal(1);drawFlags();
+  drawRainUnder();lightsNow().forEach(({sv,a})=>{ctx.save();ctx.translate(Math.round(8*sv[0]),Math.round(8*sv[1]));ctx.globalAlpha=a;GSH=1;drawGoal(0);drawGoal(1);GSH=0;ctx.restore();ctx.globalAlpha=1;drawFlagShadows(sv,a);});
+  drawGoal(0);drawGoal(1);drawFlags();
   if(B.pass&&B.pass.from.ti===0){const[a,b]=V(B.pass.tx,B.pass.ty),r=2+((frame>>2)%3);ctx.fillStyle="rgba(245,209,66,.8)";ctx.fillRect(a-r,b,r*2+1,1);ctx.fillRect(a,b-r,1,r*2+1);}
   const c=B.owner,mine=c&&c.ti===0&&!M.sim&&M.state==="play",canS=mine&&c.s!==0&&dist(c.x,c.y,GCX,0)<=shotRange();
   if(canS){const col=(frame>>3)%2?"#f5d142":"#fff";sRect(ctx,col,GX0-3,1,1,6);sRect(ctx,col,GX1+3,1,1,6);sRect(ctx,col,GX0-3,6,3,1);sRect(ctx,col,GX1+1,6,3,1);}
@@ -1941,6 +1973,8 @@ function matchDraw(){
   const [bx,by]=V(B.x,B.y),L=M.pl.map(p=>{const[x,y]=V(p.x,p.y);return[p,x,y];});L.push([null,bx,by+.5]);L.sort((a,b)=>a[2]-b[2]);
   if(M.trail.length){M.trail=M.trail.slice(-12);const n=M.trail.length,fl=M.state==="flight"||Math.hypot(B.vx,B.vy)>80;M.trail.forEach(([x,y,z],i)=>{const[a,b]=V(x,y),k=i/n,s=1+k*(fl?3:2)|0;ctx.fillStyle=fl?`rgba(255,236,160,${k*.75})`:`rgba(255,255,255,${k*.5})`;ctx.fillRect(Math.round(a-s/2),Math.round(b-(z||0)-1-s/2),s,s);});if(!B.pass&&M.state!=="flight")M.trail.shift();}
   if(mine)drawAim(c);
+  const LS=lightsNow();L.forEach(([p,x,y])=>{if(!p)return;const fr=p.mvT>0?0:(Math.floor(frame/32+p.s*.37)%2),img=kitImg(p.c,PS,fr,M.kit[p.ti]),flip=(p.fx||(p.ti?-1:1))<0,hf=PS/2,top=Math.round(PS*.875);
+    LS.forEach(({sv,a})=>castShadow(img,x,y,-hf,-top,flip,sv,a*(p.stun>0?.6:1)));}); // sombras primero: nunca tapan a otro jugador
   L.forEach(([p,x,y])=>p?drawPl(p,x,y):drawBall(x,y,B.z||0,B.rot));
   vfxDraw(M.fx);partsDraw();
   // Marca del que controlas, textos flotantes y aviso de tiro
