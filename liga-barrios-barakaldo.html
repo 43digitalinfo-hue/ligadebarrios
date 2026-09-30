@@ -1956,6 +1956,12 @@ function drawGoal(gi){
   S("#fff",GX0-1,gi?FL-1:0,2,2);S("#fff",GX1,gi?FL-1:0,2,2);S("#fff",GX0,gi?FL:-1,GX1-GX0+1,1);
 }
 function drawFlags(){[[0,0],[FW,0],[0,FL],[FW,FL]].forEach(([x,y],i)=>{const[a,b]=V(x,y),w=(frame>>3)%2;ctx.fillStyle="#1d1b26";ctx.fillRect(a,b-7,1,8);ctx.fillStyle=i%2?M.kit[1]:M.kit[0];ctx.fillRect(a+1,b-7,3,2);ctx.fillRect(a+1,b-5,2+w,1);});}
+// Borde iluminado de un sprite: píxeles opacos cuyo vecino hacia la luz (dx,dy) está vacío, pintados de col.
+function edgeImg(im,dx,dy,col,off){const k=dx+","+dy+","+col+","+off;let E=im._edge;if(!E||Object.keys(E).length>16)E=im._edge={};let o=E[k];if(o)return o;
+  o=mkC(im.width,im.height);const g=o.getContext("2d");g.drawImage(im,0,0);g.globalCompositeOperation="destination-out";g.drawImage(im,-dx*off,-dy*off);
+  g.globalCompositeOperation="source-in";g.fillStyle=col;g.fillRect(0,0,o.width,o.height);return E[k]=o;}
+// Luz de contorno del partido: de día viene del sol (lado y color según la hora); de noche, de los focos (desde arriba, fría).
+function rimLight(){const L=light(),dx=L.night>.5?0:Math.abs(L.l[0])>.25?Math.sign(L.l[0]):0;return{dx,dy:-1,col:L.night>.5?"#cfe0ff":L.col,a:.7*(1-L.night)+.35*L.night,off:Math.max(1,Math.round(PS/32))};}
 function drawPl(p,x,y){
   const k=M.kit[p.ti],me=p===M.ctrl&&!M.sim&&p.ti===0,s=PS/24,hf=PS/2,top=Math.round(PS*.875);x=Math.round(x);y=Math.round(y);
   // DECISIÓN: aro grande con el color del equipo bajo cada jugador (el tuyo, además, con borde amarillo parpadeante)
@@ -1967,7 +1973,10 @@ function drawPl(p,x,y){
   if(p.dive){rot=p.dive*1.1;dy=-3;}
   const fr=p.mvT>0?0:(Math.floor(frame/32+p.s*.37)%2),img=kitImg(p.c,PS,fr,k),flip=(p.fx||(p.ti?-1:1))<0;
   if(p.dash>0){const[vx,vy]=dirS2V(p.vx,p.vy);ctx.globalAlpha=.3;blit(img,x-hf-vx*.08,y-top-vy*.08,flip,0);ctx.globalAlpha=.55;blit(img,x-hf-vx*.04,y-top-vy*.04,flip,0);ctx.globalAlpha=1;}
-  ctx.globalAlpha=p.stun>0&&(frame>>2)%2?.5:1;blit(kitOutImg(p.c,PS,fr,k),x-hf-2,y-top+dy-2,flip,rot);blit(img,x-hf,y-top+dy,flip,rot);ctx.globalAlpha=1;
+  ctx.globalAlpha=p.stun>0&&(frame>>2)%2?.5:1;blit(kitOutImg(p.c,PS,fr,k),x-hf-2,y-top+dy-2,flip,rot);blit(img,x-hf,y-top+dy,flip,rot);
+  {const R=rimLight(),d=flip?-R.dx:R.dx,a0=ctx.globalAlpha;ctx.globalAlpha=a0*R.a;blit(edgeImg(img,d,R.dy,R.col,R.off),x-hf,y-top+dy,flip,rot);
+    if(d){ctx.globalAlpha=a0*.45;blit(edgeImg(img,-d,0,"#14122a",R.off),x-hf,y-top+dy,flip,rot);}} // luz del sol en un lado, sombra propia en el otro
+  ctx.globalAlpha=1;
   if(p.s===0){const gy=Math.round(y-11*s+dy),gx=Math.round(8*s);ctx.fillStyle="#1d1b26";ctx.fillRect(x-gx,gy,4,4);ctx.fillRect(x+gx-4,gy,4,4);ctx.fillStyle="#f5d142";ctx.fillRect(x-gx+1,gy+1,2,2);ctx.fillRect(x+gx-3,gy+1,2,2);} // guantes de portero
   if(p.stun>0){ctx.fillStyle="#f5d142";const a=frame/8;ctx.fillRect(x+Math.cos(a)*6*s,y-24*s+Math.sin(a)*2,2,2);ctx.fillRect(x-Math.cos(a)*6*s,y-24*s-Math.sin(a)*2,2,2);}
   if(p.c.rar==="d"&&frame%5===0)spawn(x+(rnd()-.5)*18*s,y-6-rnd()*16*s,0,-12,.5,"#fff7c2",1);
