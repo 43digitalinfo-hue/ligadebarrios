@@ -1373,6 +1373,38 @@ function castShadow(im,fx,fy,ox,oy,flip,sv,a){if(a<=.01)return;ctx.save();ctx.gl
 // Fuentes de luz del partido: el sol (o la luna) y, de noche, los 4 focos de las esquinas (sombras cortas en 4 direcciones).
 function lightsNow(){const L=light(),out=[];if(L.night<1)out.push({sv:shadowV(L.l,L.len),a:L.sh*(1-L.night)});
   if(L.night>.3){const k=(L.night-.3)/.7;[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>{const n=Math.SQRT1_2;out.push({sv:shadowV([a*n,b*n],.45),a:.16*k});});}return out;}
+// Cielo del barrio según la hora. bg_sky es un atardecer: se separa el cielo (relleno desde arriba) de la silueta
+// (Altos Hornos, grúas, bloques, ría) y se repinta: degradado de cada hora con la textura de nubes del original,
+// sol o luna con halo, estrellas de noche; la silueta toma la luz ambiente y de noche solo brillan las ventanas.
+const SKYK=[[0,"#070a1c","#16193a"],[5.5,"#0b0f2c","#241f4a"],[6.5,"#3a3a78","#f08a6a"],[7.5,"#5a86c8","#f2c6a0"],[10,"#3f86d8","#a9d3f0"],[14,"#3a82dc","#b6dcf4"],[17.5,"#4a88d0","#d6e2e6"],[19.5,"#6a6ab0","#f0b080"],[21.3,"#241f50","#7a3a5a"],[22.3,"#070a1c","#16193a"],[24,"#070a1c","#16193a"]];
+function skyCols(h){for(let i=1;i<SKYK.length;i++)if(h<=SKYK[i][0]){const a=SKYK[i-1],b=SKYK[i],k=(h-a[0])/(b[0]-a[0]);return[hex(mixC(a[1],b[1],k)),hex(mixC(a[2],b[2],k))];}return[hex(SKYK[0][1]),hex(SKYK[0][2])];}
+let SKYO=null,SKYS=null;
+// Máscara del cielo (1) sobre la imagen original, media de luminancia por fila del cielo y ventanas encendidas (2).
+function skySrc(im){if(SKYO)return SKYO;const w=im.width,h=im.height,c=mkC(w,h),g=c.getContext("2d");g.drawImage(im,0,0);const d=g.getImageData(0,0,w,h).data,m=new Uint8Array(w*h);
+  const isSky=(x,y)=>{const i=(y*w+x)*4,r=d[i],gg=d[i+1],b=d[i+2];return y<22&&r>=gg-4&&(r+gg+b)/3>105&&b>60&&gg>95&&Math.min(r,gg,b)<=150&&!(gg>160&&b>120);};
+  const st=[];for(let x=0;x<w;x++)if(isSky(x,0))st.push(x);while(st.length){const p=st.pop(),x=p%w,y=(p/w)|0;if(m[p])continue;m[p]=1;[[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b])=>{const X=x+a,Y=y+b;if(X>=0&&X<w&&Y>=0&&Y<h&&!m[Y*w+X]&&isSky(X,Y))st.push(Y*w+X);});}
+  for(let y=0;y<27;y++)for(let x=0;x<w;x++){const p=y*w+x,i=p*4;if(!m[p]&&d[i]>180&&d[i+1]>140&&d[i+2]<140)m[p]=2;}
+  const rm=new Float32Array(h);for(let y=0;y<h;y++){let s=0,n=0;for(let x=0;x<w;x++)if(m[y*w+x]===1){const i=(y*w+x)*4;s+=d[i]+d[i+1]+d[i+2];n++;}rm[y]=n?s/n:1;}
+  return SKYO={w,h,d,m,rm};}
+const skyKey=()=>Math.round(hourNow()*4);
+function skyStrip(W2){const im=SPRI.bg_sky;if(!im)return null;const key=skyKey()+"|"+W2;if(SKYS&&SKYS.key===key)return SKYS.c;
+  const O=skySrc(im),L=light(),h=hourNow(),[top,hor]=skyCols(h),c=mkC(W2,O.h),g=c.getContext("2d"),out=g.createImageData(W2,O.h),o=out.data;
+  const wo=Math.max(Math.exp(-(((h-20.6)/.6)**2)),.6*Math.exp(-(((h-6.8)/.4)**2))); // cuánto se parece al atardecer original
+  const t=(h-7)/14,up=t>0&&t<1,skyTop=Math.max(0,26-SKY),sunX=W2*(.5-.42*Math.cos(Math.PI*t)),sunY=11-L.el*(11-skyTop-2);
+  const tm=(((h-21)%24)+24)%24/10,moonUp=tm>0&&tm<1,moonX=W2*(.5-.42*Math.cos(Math.PI*tm)),moonY=11-Math.sin(Math.PI*tm)*(11-skyTop-2);
+  const sunC=hex(L.col),dayA=[1.02,1.1,1.18],nitA=[.3,.34,.52],r=srand(7);
+  for(let y=0;y<O.h;y++)for(let x=0;x<W2;x++){const tx=x%O.w,ox=((x/O.w)|0)%2?O.w-1-tx:tx,p=y*O.w+ox,i=p*4,j=(y*W2+x)*4,s=[O.d[i],O.d[i+1],O.d[i+2]],mk=O.m[p];let col;
+    if(mk===1){const k=Math.min(1,Math.max(0,(y-skyTop)/(21-skyTop)))**1.3,f=Math.min(1.25,Math.max(.8,1+((s[0]+s[1]+s[2])/O.rm[y]-1)*.8));
+      col=[0,1,2].map(q=>(top[q]+(hor[q]-top[q])*k)*f);
+      if(up){const dd=Math.hypot(x-sunX,(y-sunY)*1.4),gl=Math.exp(-dd/12)*(.35+.5*L.gold);for(let q=0;q<3;q++)col[q]+=sunC[q]*gl;if(dd<2.6)col=[255,250,225];}
+      if(L.night>0){if(moonUp){const dd=Math.hypot(x-moonX,y-moonY);for(let q=0;q<3;q++)col[q]+=[150,160,200][q]*Math.exp(-dd/6)*.35*L.night;if(dd<2.2&&Math.hypot(x-moonX-1,y-moonY+.6)>1.7)col=[232,236,255];}
+        const st=r();if(st<.007&&y<18)for(let q=0;q<3;q++)col[q]+=(255-col[q])*L.night*(.35+st*80);}
+      col=col.map((v,q)=>v+(s[q]-v)*wo);}
+    else{const A=[0,1,2].map(q=>{const a=dayA[q]+(1-dayA[q])*wo;return a+(nitA[q]-a)*L.night;});col=s.map((v,q)=>v*A[q]);
+      if(mk===2){const lum=(s[0]+s[1]+s[2])/3*.55,day=(1-L.night)*(1-wo);col=col.map((v,q)=>{const lit=s[q]*1.1;return(lit+(lum-lit)*day)*(1-L.night)+lit*L.night;});}
+      if(y>=27)col=col.map((v,q)=>v+(hor[q]*(1-L.night*.6)-v)*.3*(1-wo));}
+    o[j]=col[0];o[j+1]=col[1];o[j+2]=col[2];o[j+3]=255;}
+  g.putImageData(out,0,0);SKYS={key,c};return c;}
 // ================= PARTIDO EN TIEMPO REAL =================
 // Coordenadas de simulación: x = ancho (0..FW), y = largo (0..FL); el equipo 0 ataca hacia y = 0.
 // La vista es vertical (móvil en vertical) u horizontal (ordenador o móvil girado, el equipo 0 ataca hacia la derecha).
@@ -1441,7 +1473,7 @@ function buildPitch(){
   R("#1b2230",0,0,MW,MH);for(let y=SKY+5;y<MH;y+=CRP){R("#2b3a57",0,y,MW,4);R("#324567",0,y,MW,1);R("#4a5064",0,y+4,MW,2);R("#1c2130",0,y+6,MW,1);}
   for(let x=24;x<MW;x+=48){R("#555b6b",x,SKY,3,MH-SKY);for(let y=SKY+2;y<MH;y+=3)R("#3d4252",x,y,3,1);}
   // Cielo del barrio: Altos Hornos, grúas de la ría y bloques (PixelLab), con la cubierta de la grada debajo
-  if(SKY){const im=SPRI.bg_sky;if(im){const sy=Math.max(0,26-SKY),sh2=Math.min(SKY,im.height-sy);for(let x=0,i=0;x<MW;x+=im.width,i++){g.save();if(i%2){g.translate(x+im.width,0);g.scale(-1,1);g.drawImage(im,0,sy,im.width,sh2,0,SKY-sh2,im.width,sh2);}else g.drawImage(im,0,sy,im.width,sh2,x,SKY-sh2,im.width,sh2);g.restore();}}
+  PITCH.sk=skyKey();if(SKY){const im=skyStrip(MW);if(im){const sy=Math.max(0,26-SKY),sh2=Math.min(SKY,im.height-sy);g.drawImage(im,0,sy,MW,sh2,0,SKY-sh2,MW,sh2);}
     else{const gr=g.createLinearGradient(0,0,0,SKY);gr.addColorStop(0,"#3a2a5a");gr.addColorStop(1,"#e0804a");g.fillStyle=gr;g.fillRect(0,0,MW,SKY);}
     R("#15141c",0,SKY,MW,3);for(let x=0;x<MW;x+=12)R("#2e2d3a",x,SKY,2,3);R("rgba(0,0,0,.35)",0,SKY+3,MW,2);}
   // Pista alrededor del césped
@@ -1961,6 +1993,7 @@ function matchDraw(){
   const Z=ZM,B=M.ball;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle="#1b2230";ctx.fillRect(0,0,W,H);
   ctx.save();ctx.scale(Z,Z);
   if(M.shake>0){M.shake-=1/60;const a=Math.min(3,M.shake*12);ctx.translate(Math.round((rnd()-.5)*2*a),Math.round((rnd()-.5)*2*a));}
+  if(PITCH.sk!==skyKey()){buildPitch();PITCH.w0=W;PITCH.h0=H;} // el cielo cambia cada cuarto de hora
   ctx.drawImage(PITCH,0,0);if(CROWD)ctx.drawImage(CROWD[((M.cel||M.state==="intro")&&(frame>>3)%2)||(frame>>4)%11===0?1:0],0,0);
   drawBoards(M.rt,Z);
   if(M.state==="pens"){ctx.restore();drawPens();drawTxema();return;}
@@ -3172,7 +3205,7 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 function drawTitleBg(){
-  if(!PITCH||PITCH.w0!==W||PITCH.h0!==H)layoutField();ctx.fillStyle="#1f2a1c";ctx.fillRect(0,0,W,H);ctx.save();ctx.scale(ZM,ZM);ctx.drawImage(PITCH,0,0);drawBoards(performance.now()/1000,ZM);ctx.restore();ctx.fillStyle="rgba(29,27,38,.35)";ctx.fillRect(0,0,W,H);
+  if(!PITCH||PITCH.w0!==W||PITCH.h0!==H||PITCH.sk!==skyKey())layoutField();ctx.fillStyle="#1f2a1c";ctx.fillRect(0,0,W,H);ctx.save();ctx.scale(ZM,ZM);ctx.drawImage(PITCH,0,0);drawBoards(performance.now()/1000,ZM);ctx.restore();ctx.fillStyle="rgba(29,27,38,.35)";ctx.fillRect(0,0,W,H);
   ["fumon","txipiron","carbonilla"].forEach((sp,i)=>{const s=DATA.sp[sp],x=Math.round(W/2-100+i*68),y=Math.round(H*.72+Math.sin(frame/30+i)*4);pxEll(x+32,y+62,22,4,"rgba(0,0,0,.3)");ctx.drawImage(formImg(s.f[0],s.t,false,32,(frame>>5)&1),x,y,64,64);});
 }
 $("bSnd").textContent=AU.on?"♪":"✕♪";
