@@ -2220,17 +2220,74 @@ const TSND={humo:()=>{noise(.8,.08);tone(90,.6,"triangle",.05,0,60);},fuego:()=>
 const TKIND={"Me la fumo":"humo","Calada final":"humo","Caño de chándal":"rayas","Por la acera":"elec","Firma en la escuadra":"magia","Colada de acero":"fuego","Chispazo":"elec","Chorro de tinta":"agua","La Gabarra":"agua","Raíz de haya":"madera","Cabezazo latxo":"golpe","Derrumbe del Mega":"golpe","Picado del buitre":"viento","La p*ta vieja":"metal","Tapa y reciclo":"metal","Flotador":"agua","Muro de hormigón":"golpe","A cal y canto":"metal","Obra parada":"metal","Pinza":"golpe","Muro de caserío":"golpe","La zanja":"golpe","El vacile":"magia","Turno de noche":"metal","Marea alta":"agua","Galerna":"viento"};
 const techSfx=t=>{try{(TSND[TKIND[t.n]]||SFX.tecnica)();}catch(e){}};
 function bigTxt2(s,x,y,col,size,c2){bigTxt(s,x,y,col,size,32,c2);}
-function csL(){const gw=Math.min(Math.round(W*.74),210),gh=Math.round(gw*.36),gx=Math.round(W/2-gw/2),gy=SAFE.t+Math.round(H*.12);
+function csL(){const gw=Math.min(Math.round(W*.74),210),gh=Math.round(gw*2.44/7.32),gx=Math.round(W/2-gw/2),gy=SAFE.t+Math.round(H*.12);
   return{gw,gh,gx,gy,kx:Math.round(W/2),ky:gy+gh,sx:Math.round(W/2),sy:Math.round(H*.78),blx:Math.round(W/2+W*.1),bly:Math.round(gy+gh+(H*.78-gy-gh)*.45)};}
+// ---- Estadio de la pantalla de tiro: cámara detrás del que tira, a 3,5 m de altura, mirando a la portería.
+// Proyección: x = W/2 + f·X/Z, y = hz + f·(h−Y)/Z (X lateral, Y altura, Z distancia, en metros). La portería (7,32 m) mide L.gw.
+const CAMH=3.5;
+function csProj(L){const s=L.gw/7.32,Zg=22,f=s*Zg,hz=L.gy+L.gh-s*CAMH;return{s,Zg,f,hz,P:(X,Y,Z)=>[W/2+f*X/Z,hz+f*(CAMH-Y)/Z],Zat:y=>f*CAMH/(y-hz)};}
+let CSBG=null;
+// Fondo fijo (2 fotogramas del público): cielo, cubierta con focos, grada escalonada con aficionados, vallas LED, césped segado y líneas.
+function csStadium(L){const kit=M?M.kit:["#b3202a","#2f6fb0"],key=[W,H,L.gw,L.gy,skyKey(),kit.join()].join("|");if(CSBG&&CSBG.key===key)return CSBG;
+  const J=csProj(L),{f,hz,Zg,P}=J,[top,hor]=skyCols(hourNow()),night=light().night,cs=[];
+  for(let fr=0;fr<2;fr++){const c=mkC(W,H),g=c.getContext("2d"),R=(col,x,y,w,h)=>{g.fillStyle=col;g.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(w)),Math.max(1,Math.round(h)));},r=srand(99);
+    const sk=g.createLinearGradient(0,0,0,Math.max(1,hz));sk.addColorStop(0,`rgb(${top})`);sk.addColorStop(1,`rgb(${hor})`);g.fillStyle=sk;g.fillRect(0,0,W,H);
+    // Grada: filas de 0,85 m de fondo y 0,5 m de alto detrás de la portería; se dibuja de la última a la primera
+    const Z0=Zg+6.5,rows=[];for(let i=0;i<40;i++){const Z=Z0+i*.85,Y=1.6+i*.5,y=P(0,Y,Z)[1];rows.push({Z,Y,y});if(y<-4)break;}
+    const topY=rows[rows.length-1].y;
+    // cubierta de la grada (si queda cielo por encima) con la batería de focos
+    if(topY>0){const ry=Math.max(0,topY-Math.round(f*1.2/rows[rows.length-1].Z));R("#15141c",0,ry,W,topY-ry+2);R("#2e2d3a",0,ry,W,1);for(let x=4;x<W;x+=Math.max(6,Math.round(W/40)))R(night>.3?"#eef4ff":"#6b7184",x,ry+1,Math.max(2,Math.round(W/90)),2);
+      for(let x=0;x<W;x+=Math.round(W/8))R("#23222e",x,ry-Math.round(H*.04),2,Math.round(H*.04));}
+    for(let i=rows.length-1;i>=0;i--){const{Z,Y,y}=rows[i],yn=i>0?rows[i-1].y:P(0,0,Z0-.3)[1],sp=f*.55/Z,ph=f*.95/Z,dk=(1-Math.min(.45,i*.018))*(1-.5*night);
+      const step=`rgb(${Math.round(75*dk)},${Math.round(81*dk)},${Math.round(99*dk)})`;R(step,0,y,W,yn-y+1);R("rgba(0,0,0,.25)",0,y,W,1);
+      const pw=Math.max(2,sp*.62),hd=Math.max(2,Math.round(pw*.72)),aisle=Math.round(f*12/Z);
+      for(let x=(r()*sp)|0,n=0;x<W;x+=sp,n++){const X=((x-W/2)*Z/f),inA=((X%12)+12)%12<.9;if(inA){if(n%2===0)R("#6a6f80",x,y,pw,yn-y);continue;}if(r()<.07)continue;
+        const side=X<0?0:1,sh=r()<.72?kit[side]:["#e8e2d0","#2a2a35","#c33b2a","#3a6a9a","#f5d142","#46305e"][(r()*6)|0],skin=["#f1c9a5","#e0ac7e","#c68a5e","#8d5a3b"][(r()*4)|0],hair=["#2a1d14","#5a3a1a","#1d1b26","#c9a34a","#8a8f99"][(r()*5)|0];
+        const up=fr?r()<.38:r()<.07,jy=up&&fr?Math.round(ph*.18):0,by=y+(yn-y)*.15-ph*.55-jy,bh=ph*.55;
+        R(sh,x,by,pw,bh);R("rgba(0,0,0,.18)",x+pw*.6,by,pw*.4,bh);R(skin,x+(pw-hd)/2,by-hd,hd,hd);R(hair,x+(pw-hd)/2,by-hd,hd,Math.max(1,hd*.35));
+        if(up){R(skin,x-1,by-hd*1.3,1,hd*1.3);R(skin,x+pw,by-hd*1.3,1,hd*1.3);if(r()<.4){R(kit[side],x-2,by-hd*1.6,pw+4,Math.max(1,hd*.4));R("#fff",x-2+Math.round((pw+4)/3),by-hd*1.6,Math.max(1,Math.round((pw+4)/3)),Math.max(1,hd*.4));}}}
+    }
+    // Frente de la grada con pancartas del barrio
+    {const[,a]=P(0,1.6,Z0),[,b]=P(0,0,Z0);R("#2b3a57",0,a,W,b-a);R("#4a5a7a",0,a,W,1);const bw=Math.round(f*9/Z0),bh=Math.round((b-a)*.4);
+      ["AUPA "+(M?M.abbr[0]:"CRU"),"BARAKALDO","ERREKA","LIGA DE BARRIOS"].forEach((t,i)=>{const x=Math.round(W/2+(i-2)*bw*1.35+bw*.18);R(i%2?kit[1]:kit[0],x,a+1,bw,bh);R("#fff",x,a+1,bw,1);g.fillStyle=i%2?"#1d1b26":"#fff";g.font=`bold ${Math.max(6,Math.round(bh*.72))}px sans-serif`;g.textAlign="center";g.textBaseline="middle";g.fillText(t,x+bw/2,a+1+bh/2+1,bw-4);});}
+    // Césped: franjas de 5 m paralelas a la línea de gol, más claras a lo lejos; textura de hierba
+    const Zb=Zg+3.6,Zn=J.Zat(H+1);for(let Z=Zb,i=0;Z>Zn;Z-=2.5,i++){const Z2=Math.max(Zn,Z-2.5),y1=P(0,0,Z)[1],y2=P(0,0,Z2)[1],band=Math.floor((Zg+3.6-Z)/5)%2,fog=Math.min(.18,(Z-10)/120);
+      const base=band?[66,144,58]:[74,153,62];g.fillStyle=`rgb(${base.map(v=>Math.round(v+(200-v)*fog)).join()})`;g.fillRect(0,Math.floor(y1),W,Math.ceil(y2-y1)+1);}
+    const yb=P(0,0,Zb)[1];for(let i=0;i<W*(H-yb)/9;i++){const y=yb+r()*(H-yb),x=r()*W,Z=J.Zat(y),l=Math.max(1,Math.round(f*.05/Z));g.fillStyle=r()<.5?"rgba(0,0,0,.08)":"rgba(255,255,255,.07)";g.fillRect(x|0,y|0,1,l);}
+    // Líneas: gol, área pequeña, área grande, punto de penalti y semicírculo (grosor según la distancia)
+    const line=(pts)=>{g.strokeStyle="rgba(240,244,236,.92)";for(let i=1;i<pts.length;i++){const a=P(pts[i-1][0],0,pts[i-1][1]),b=P(pts[i][0],0,pts[i][1]);g.lineWidth=Math.max(1,f*.12/((pts[i-1][1]+pts[i][1])/2));g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();}};
+    line([[-40,Zg],[40,Zg]]);line([[-9.16,Zg],[-9.16,Zg-5.5],[9.16,Zg-5.5],[9.16,Zg]]);line([[-20.16,Zg],[-20.16,Zg-16.5],[20.16,Zg-16.5],[20.16,Zg]]);
+    {const sp=P(0,0,Zg-11);g.fillStyle="#f0f4ec";g.fillRect(Math.round(sp[0])-1,Math.round(sp[1]),3,2);const arc=[];for(let a=-.93;a<=.93;a+=.08)arc.push([Math.sin(a)*9.15,Zg-11-Math.cos(a)*9.15]);line(arc.filter(p=>p[1]<Zg-16.5+.01));}
+    // Vallas LED detrás de la portería (6 m cada panel) con su logo
+    {const Zv=Zg+3.5,[,ya]=P(0,.9,Zv),[,yb2]=P(0,0,Zv),ph=yb2-ya,pw=f*6/Zv;R("#111016",0,ya-1,W,ph+2);
+      for(let i=0,x=W/2-pw*Math.ceil(W/2/pw+1);x<W;x+=pw,i++){const A=ADS[((i%ADS.length)+ADS.length)%ADS.length],ic=SPRI["ad_"+A[3]];R(A[1],x+1,ya,pw-1,ph);
+        const lw=Math.round(ph*.9);if(ic){R("#f4f1ea",x+2,ya+1,lw,ph-2);g.imageSmoothingEnabled=false;g.drawImage(ic,x+2,ya+1,lw,ph-2);}
+        g.fillStyle=A[2];g.font=`bold ${Math.max(5,Math.round(ph*.5))}px sans-serif`;g.textAlign="center";g.textBaseline="middle";g.fillText(A[0],x+lw+(pw-lw)/2,ya+ph/2+1,pw-lw-6);
+        for(let yy=ya;yy<ya+ph;yy+=2)R("rgba(0,0,0,.08)",x,yy,pw,1);R("rgba(255,255,255,.18)",x,ya,pw,1);}
+      R("rgba(0,0,0,.3)",0,yb2,W,Math.max(1,ph*.25));}
+    cs.push(c);}
+  CSBG={key,c:cs,J};return CSBG;}
+// Portería en perspectiva: postes y larguero redondos, red con fondo, laterales y techo (el fondo se hincha con el gol).
+function csGoal(L,vib){const{J}=csStadium(L),{P,Zg}=J,nb=CS.net||0,nx=CS.netX||W/2,Zb=Zg+2.2,hb=1.9,v=vib||0;
+  const Q=(X,Y,Z)=>{const p=P(X,Y,Z);return[p[0]+v,p[1]];},mesh=(a,b,c,d,nu,nv,bul)=>{ctx.strokeStyle="rgba(235,240,242,.55)";ctx.lineWidth=1;
+    for(let i=0;i<=nu;i++){ctx.beginPath();for(let j=0;j<=nv;j++){const u=i/nu,w=j/nv,p=[0,1].map(k=>lerp(lerp(a[k],b[k],u),lerp(d[k],c[k],u),w));if(bul)p[1]-=bul(p);j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}ctx.stroke();}
+    for(let j=0;j<=nv;j++){ctx.beginPath();for(let i=0;i<=nu;i++){const u=i/nu,w=j/nv,p=[0,1].map(k=>lerp(lerp(a[k],b[k],u),lerp(d[k],c[k],u),w));if(bul)p[1]-=bul(p);i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}ctx.stroke();}};
+  const bl=Q(-3.66,0,Zb),br=Q(3.66,0,Zb),tl=Q(-3.66,hb,Zb),tr=Q(3.66,hb,Zb),fl=Q(-3.66,0,Zg),fr=Q(3.66,0,Zg),ftl=Q(-3.66,2.44,Zg),ftr=Q(3.66,2.44,Zg);
+  // sombra de la portería en el césped según el sol
+  const Lt=light(),sv=shadowV(Lt.l,Lt.len);ctx.fillStyle=`rgba(0,0,0,${.22*(1-Lt.night)+.08})`;const sh=(p,hgt)=>[p[0]+sv[0]*hgt*J.s*.9,p[1]+sv[1]*hgt*J.s*.9];
+  ctx.beginPath();[fl,sh(fl,2.44),sh(fr,2.44),fr].forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.fill();
+  const bul=p=>{const d=Math.max(0,1-Math.hypot(p[0]-nx,(p[1]-(tl[1]+bl[1])/2)*1.4)/(L.gw*.3));return nb*d*L.gh*.12;};
+  mesh(tl,tr,br,bl,24,7,bul);mesh(ftl,tl,bl,fl,6,8);mesh(tr,ftr,fr,br,6,8);mesh(ftl,ftr,tr,tl,24,6);
+  ctx.strokeStyle="#9aa3a8";ctx.lineWidth=1;[[tl,bl],[tr,br],[ftl,tl],[ftr,tr]].forEach(([a,b])=>{ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();});
+  const pw=Math.max(3,Math.round(J.s*.14));ctx.fillStyle="#f4f6f5";ctx.fillRect(Math.round(fl[0]-pw),Math.round(ftl[1]),pw,Math.round(fl[1]-ftl[1]));ctx.fillRect(Math.round(fr[0]),Math.round(ftr[1]),pw,Math.round(fr[1]-ftr[1]));ctx.fillRect(Math.round(ftl[0]-pw),Math.round(ftl[1]-pw),Math.round(ftr[0]-ftl[0]+pw*2),pw);
+  ctx.fillStyle="#c3cbcf";ctx.fillRect(Math.round(fl[0]-1),Math.round(ftl[1]),1,Math.round(fl[1]-ftl[1]));ctx.fillRect(Math.round(fr[0]+pw-1),Math.round(ftr[1]),1,Math.round(fr[1]-ftr[1]));ctx.fillRect(Math.round(ftl[0]-pw),Math.round(ftl[1]-1),Math.round(ftr[0]-ftl[0]+pw*2),1);}
+// Fondo desenfocado del estadio para las presentaciones de técnica (se reduce y se amplía con suavizado).
+let CSBLUR=null;
+function csBlurBg(){const L=CS.L,B=csStadium(L),k=B.key;if(!CSBLUR||CSBLUR.k!==k){const s=mkC(Math.max(1,W>>3),Math.max(1,H>>3)),g=s.getContext("2d");g.imageSmoothingEnabled=true;g.drawImage(B.c[0],0,0,s.width,s.height);CSBLUR={k,s};}
+  ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(CSBLUR.s,0,0,W,H);ctx.restore();}
 function csBg(){
-  const L=CS.L;for(let y=0;y<H;y+=12){ctx.fillStyle=(y/12)%2?"#3f8a35":"#48973c";ctx.fillRect(0,y,W,12);}
-  ctx.fillStyle="#23301f";ctx.fillRect(0,0,W,L.gy-8);for(let x=0;x<W;x+=3)for(let y=0;y<L.gy-10;y+=3){ctx.fillStyle=["#e0552b","#f5d142","#2f7fc0","#efe3c8","#7b4fa0"][(x*7+y*13)%5];ctx.fillRect(x,y+((frame>>3)+x)%2,2,2);}
-  ctx.fillStyle="#eef4e6";const bw=L.gw+Math.round(W*.16),bx=Math.round(W/2-bw/2),bh=Math.round(H*.2);ctx.fillRect(bx,L.gy+L.gh,bw,1);ctx.fillRect(bx,L.gy+L.gh,1,bh);ctx.fillRect(bx+bw,L.gy+L.gh,1,bh);ctx.fillRect(bx,L.gy+L.gh+bh,bw+1,1);
-  const vib=CS.vib>0?Math.round(Math.sin(frame*1.7)*2*CS.vib):0,gx=L.gx+vib;
-  ctx.fillStyle="rgba(0,0,0,.3)";ctx.fillRect(gx+3,L.gy+L.gh,L.gw,3);ctx.fillStyle="#cfd8db";ctx.fillRect(gx,L.gy,L.gw,L.gh);
-  const nb=CS.net||0,nx=CS.netX||W/2;ctx.fillStyle="#8a969a";
-  for(let x=gx;x<gx+L.gw;x+=4)for(let y=L.gy;y<L.gy+L.gh;y+=4){const d=Math.max(0,1-Math.hypot(x-nx,(y-L.gy-L.gh*.5)*1.5)/40);ctx.fillRect(x+((y/4)%2)*2,y-Math.round(nb*d*6),1,1);}
-  ctx.fillStyle="#fff";ctx.fillRect(gx-3,L.gy-3,3,L.gh+3);ctx.fillRect(gx+L.gw,L.gy-3,3,L.gh+3);ctx.fillRect(gx-3,L.gy-3,L.gw+6,3);ctx.fillStyle="#bbb";ctx.fillRect(gx-3,L.gy-1,L.gw+6,1);
+  const L=CS.L,B=csStadium(L);ctx.drawImage(B.c[(CS.res==="gol"&&CS.step&&CS.step.k==="result")||(frame>>4)%9===0?(frame>>3)%2:0],0,0);
+  csGoal(L,CS.vib>0?Math.round(Math.sin(frame*1.7)*2*CS.vib):0);
 }
 function shotCinema(SH,done){
   for(const p of PP)p.l=0;
@@ -2392,7 +2449,7 @@ const DFX={
 function drawCine(){
   if(!CS)return;const L=CS.L,SH=CS.SH,st=CS.step;
   ctx.save();if(CS.shake>0)ctx.translate(Math.round((rnd()-.5)*8*CS.shake*2),Math.round((rnd()-.5)*8*CS.shake*2));
-  if(st&&st.k==="prep"){const col=DATA.tcol[st.tk.t],k=st.t/st.dur;ctx.fillStyle="#1d1b26";ctx.fillRect(0,0,W,H);ctx.globalAlpha=.55;ctx.fillStyle=col;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;speedLines("rgba(255,255,255,.55)",W/2,H*.42);
+  if(st&&st.k==="prep"){const col=DATA.tcol[st.tk.t],k=st.t/st.dur;csBlurBg();ctx.fillStyle="rgba(20,18,30,.45)";ctx.fillRect(0,0,W,H);ctx.globalAlpha=.5;ctx.fillStyle=col;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;speedLines("rgba(255,255,255,.55)",W/2,H*.42);
     const sz=k<.35?64:96;drawCre(st.who.c,W/2-sz/2,H*.42-sz/2,sz,st.who.ti===1,{anim:st.tk.cat==="tiro"?"tiro":"parada",shadow:false});
     const bx=Math.round((1-Math.min(1,k*4))*W);ctx.fillStyle="rgba(29,27,38,.85)";ctx.fillRect(0,H*.66,W,48);ctx.fillStyle=col;ctx.fillRect(0,H*.66,W,2);ctx.fillRect(0,H*.66+46,W,2);
     const sc=1+Math.max(0,.25-Math.abs(k-.3))*1.2;bigTxt(st.tk.n.toUpperCase(),W/2+bx,H*.66+24,"#fff",Math.round((st.tk.n.length>15?12:16)*sc),Math.round(32*sc));txt(`${st.tk.cat.toUpperCase()} N${st.tk.lv} · ${cName(st.who.c)} (${st.who.ti===0?"tú":"rival"})`,W/2,H*.66+40,col,8,"center");
@@ -2435,6 +2492,7 @@ function drawCine(){
       if(r==="gol")txt(SH.sh.ti===0?"¡Gol de tu equipo!":"Gol del rival...",W/2,H*.52+20,"#fff",9,"center");}}
   if(CS.ball&&!CS.hideBall)bigBall(CS.ball[0],CS.ball[1],CS.ball[2]||0,5,CS.f.glow);
   vfxDraw(CS.vf);partsDraw();
+  postFx({skyH:0,lamps:[[.2,.85,.8],[.8,.85,.8],[.5,.65,.9]],lk:5}); // misma luz de la hora que el partido
   if(CS.flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(1,CS.flash)})`;ctx.fillRect(0,0,W,H);}
   ctx.fillStyle="rgba(29,27,38,.75)";ctx.fillRect(0,SAFE.t,W,13);txt(SH.pen?`PENALTI · ${M.abbr[0]} ${M.P?M.P.sc[0]:0}-${M.P?M.P.sc[1]:0} ${M.abbr[1]}`:`${M.abbr[0]} ${M.sc[0]}-${M.sc[1]} ${M.abbr[1]}`,W/2,SAFE.t+10,"#fff",9,"center");
   if(CS.skippable&&st&&st.k!=="result")txt("Toca para saltar",W-4,H-SAFE.b-6,"rgba(255,255,255,.6)",7,"right");
