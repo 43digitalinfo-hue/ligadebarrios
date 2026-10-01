@@ -134,6 +134,38 @@ Probado con un jugador automático que usa el joystick y los botones táctiles (
   - **Barras y etiquetas:** en forma de píldora.
   - **Rótulo del barrio:** se dibuja a resolución real.
 
+## Décima tanda: pantalla de captura, banda sonora y retoques
+
+- **Pantalla de captura (fichaje), rediseñada entera:**
+  - **Escenario de Barakaldo según el tipo de la criatura.** Callejero: bloques de pisos y plaza de baldosas. Monte: cordales, caserío y prado con flores. Currela: alto horno, chimeneas y naves. Ría: Puente Colgante, grúas, agua y muelle.
+  - **Composición de combate:** la criatura en su plataforma, arriba a la derecha, y tú de espaldas en primer plano.
+  - **Ficha de la criatura:** nombre, nivel, tipo, rareza, confianza y paciencia.
+  - **Ficha tuya:** tu plantilla en miniatura.
+  - **Entrada animada:** destello y plataformas que llegan desde los lados.
+  - **Escenario vivo:** nubes que pasan, gaviotas y brillos en la ría, humo en las fábricas y hojas en el monte.
+  - **Contrato:** papel en modal sobre la escena oscurecida, con sello «OK».
+  - **¡FICHADA!:** rayos, confeti y cinta dorada.
+  - La escena se ajusta al hueco que deja el panel de botones en móvil vertical, móvil horizontal y ordenador.
+- **Banda sonora adaptativa, nueva y generada en el propio juego:**
+  - Suena baja y con reverb, y pasa de un tema a otro con fundido.
+  - **Portada:** nostalgia.
+  - **Barrio:** calma. De noche, según la hora real, cambia a una versión más íntima.
+  - **Fichaje:** curiosidad. Con el contrato, sube la tensión y entra un latido.
+  - **Partido:** la tensión sube con un marcador igualado, con el final del segundo tiempo, con los goles y con los penaltis. Entonces entran bombo, platos y cuerdas.
+  - **Tiro:** latido y cuerdas graves.
+  - **Minijuegos:** tema juguetón.
+  - **Feria:** vals de acordeón.
+  - **Derrota:** tristeza, con piano y cuerdas.
+  - **Victoria:** euforia contenida.
+  - Sustituye a la musiquilla de 8 bits.
+- **Tiro al muelle (los de la gabarra):** en ordenador no se llegaba a darles por falta de potencia. Ahora el balón sale desde más arriba y el arrastre tiene más fuerza, así que la gabarra se alcanza sin salirse de la pantalla. La zona de acierto también es algo más generosa.
+- **Mus y dados:**
+  - Mesa de madera redondeada con fieltro.
+  - Cartas a alta resolución con esquinas redondeadas.
+  - Dorso nuevo con rombos y escudo dorado.
+  - Caras suavizadas con marco de color.
+  - Bocadillos, lances y tanteo redondeados; las piedras del tanteo son redondas.
+
 ## Error corregido: el juego se congelaba tras ganar a Retuerto
 
 - **Causa:** la animación de la insignia usaba las rayas de velocidad de la pantalla de tiro, y estas leían el reloj del tiro (`CS.t`). Fuera de un tiro `CS` está vacío, así que el dibujo fallaba en cada fotograma. La animación nunca terminaba y el juego se quedaba en negro. Pasaba con la primera insignia (Retuerto) y habría pasado con todas.
@@ -169,4 +201,6 @@ Probado con un jugador automático que usa el joystick y los botones táctiles (
 
 - Quinta tanda: carga sin errores; joystick, flujo de partida nueva en móvil, partido táctil, minijuegos (incluidos los 3 entrenamientos en tres dificultades), feria en móvil y escritorio, frontón, chapas y sokatira superados sin errores.
 
-No he hecho una partida humana completa de principio a fin, ni he probado en un móvil real.
+- Décima tanda: pantalla de captura capturada con los cuatro tipos en móvil vertical, móvil horizontal y ordenador; temas de la banda sonora renderizados sin errores y con el cambio de tema comprobado por escenas; tiro al muelle con 6-8 dianas de 8 apuntando bien en las tres dificultades; carga, flujo y partido simulado sin errores.
+
+No he hecho una partida humana completa de principio a fin, ni he probado en un móvil real. La banda sonora no la he escuchado: la he comprobado con niveles y espectrogramas.

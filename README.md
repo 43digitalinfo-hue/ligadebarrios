@@ -32,6 +32,9 @@ medalla en directo y aviso en los últimos segundos. Todos tienen escenario y an
 Se dibujan en HD a la resolución real de la pantalla, con escenarios redondeados y texturas, personajes vectoriales
 y criaturas escaladas con Scale2x.
 
+La música es generativa (Web Audio) y cambia según el momento: calma en el barrio, curiosidad al fichar, tensión creciente en el partido,
+tristeza en la derrota y euforia en la victoria. Suena baja para acompañar sin tapar.
+
 ## Contenido
 
 - `liga-barrios-barakaldo.html`: el juego.
