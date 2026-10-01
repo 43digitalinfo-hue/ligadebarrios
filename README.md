@@ -6,6 +6,8 @@ Juego de navegador: RPG de criaturas con vista cenital y partidos de fútbol arc
 
 Abre `liga-barrios-barakaldo.html` en el navegador. Es un único archivo autocontenido (sprites incluidos); solo la fuente Pixelify Sans se descarga de Google Fonts.
 
+En el móvil, el partido se juega con un joystick flotante en la mitad izquierda y botones a la derecha. Si el teléfono lo permite (Android), vibra; se quita en el título, el Menú o la Pausa.
+
 ### Parámetros de la URL
 
 - `?debug`: activa el Modo prueba (toca 5 veces el título) y expone `window.G` para depurar. Sin este parámetro no están disponibles.

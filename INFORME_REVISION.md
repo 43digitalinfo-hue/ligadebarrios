@@ -74,6 +74,12 @@ Arreglos que salieron al probar:
 - **Herramientas de prueba:** el Modo prueba y `window.G` solo existen con `?debug` en la URL.
 - **Datos sin uso borrados:** `DATA.missions`, `zones[].missions`, `teams.kuadrillachula` y `teams.remeros`, `story.act1End`, `story.firmasDone` y `story.unlock`, y los campos de estado `a1`, `a2`, `a1Targets`, `firmas` y `ms`. También las funciones `duelScreen`, `shootR` y `winsCount`, que nadie llamaba.
 
+## Cuarta tanda: joystick del partido y vibración
+
+- **Joystick que se quedaba pegado:** si soltabas el dedo fuera del partido (pantalla de tiro, pausa), el joystick viejo seguía vivo. Tu jugador seguía corriendo y no podías coger otro. Ahora el juego sabe qué dedos siguen en la pantalla: al soltar se libera siempre, y un joystick huérfano se descarta al volver a tocar. Si el navegador cancela un toque, solo se suelta ese dedo y no el del joystick.
+- **Joystick más fino:** zona muerta más pequeña, a media carrera ya vas a tope, y si arrastras más allá del borde la base sigue al dedo, así que no hay que volver atrás para cambiar de dirección.
+- **Vibración** (Android; iOS no la permite): al coger el joystick, al llegar al borde, en pases, tiros, goles, entradas ganadas o perdidas, postes, supertécnicas y botones del partido. En los minijuegos vibra con cada golpe o fallo. Se activa o desactiva en el título, en el Menú y en la Pausa ("Vibración: sí/no").
+
 ## Detectado pero sin cambiar: decides tú
 
 - **Balance:** simulé 200 partidos IA contra IA y salen 3,35 goles y 15,6 tiros por partido. El comentario de `BALANCE` dice que está calibrado en unos 2,6 goles y 13 tiros, con un objetivo de 2-3 goles. Para volver a ese rango, se podría bajar `shot.base` de 28 a unos 24 y volver a simular (Modo prueba → "Simular 50 partidos").

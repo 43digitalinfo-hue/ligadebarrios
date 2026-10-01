@@ -531,6 +531,17 @@ const SFX={
   evo:()=>[392,523,659,784,1047,1319].forEach((f,i)=>tone(f,.14,"triangle",.07,i*.1)),
   paso:()=>{}
 };
+// Vibración (háptica) en móviles: cada sonido tiene su patrón y el joystick y los botones dan toques cortos.
+// Se puede apagar con el botón 📳 (se guarda). En iOS el navegador no permite vibrar y no hace nada.
+const HAP={on:true,ok:typeof navigator!=="undefined"&&typeof navigator.vibrate==="function",last:0};
+try{HAP.on=localStorage.getItem(KEY+"_vib")!=="0";}catch(e){}
+function hap(p){if(!HAP.on||!HAP.ok||p==null)return;const n=performance.now();if(typeof p==="number"&&p<15&&n-HAP.last<45)return;HAP.last=n;try{navigator.vibrate(p);}catch(e){}}
+const HAPP={pase:12,tiro:30,gol:[60,50,60,50,140],duelo:[15,30,20],tecnica:[20,30,40,30,90],menu:6,bien:[14,40,18],mal:45,evo:[30,40,30,40,70]};
+Object.keys(HAPP).forEach(k=>{const f=SFX[k];SFX[k]=(...a)=>{f(...a);hap(HAPP[k]);};});
+function toggleVib(){HAP.on=!HAP.on;try{localStorage.setItem(KEY+"_vib",HAP.on?"1":"0");}catch(e){}document.querySelectorAll(".vibB").forEach(b=>b.textContent=vibLbl());if(HAP.on)hap(40);}
+const vibLbl=()=>"Vibración: "+(HAP.on?"sí":"no");
+// Botón de vibración para menús (solo si el móvil la admite; iOS no tiene navigator.vibrate).
+const vibBtn=h=>HAP.ok&&TOUCH?`<button class="vibB" onclick="${h(toggleVib)}">${vibLbl()}</button>`:"";
 const sfx=n=>{try{SFX[n]&&SFX[n]();}catch(e){}};
 const SONGS={
   world:{bpm:118,mel:[72,0,76,79,77,76,74,0,72,74,76,0,74,72,71,0,69,0,72,76,74,72,71,0,67,69,71,72,74,0,72,0],bas:[48,48,53,53,55,55,48,48,45,45,53,53,43,43,48,48]},
@@ -1124,7 +1135,7 @@ function titleScreen(){
   scene="title";showPad(false);music("title");const has=!!loadRaw();
   OV(()=>`<div class="title"><h1 id="tt" onclick="${Hk(()=>{const n=Date.now();if(n-titleT>2500)titleTaps=0;titleT=n;if(DEBUG&&++titleTaps>=5){titleTaps=0;testMenu();}})}">LIGA DE<br>BARRIOS</h1><p class="sub">Barakaldo · fútbol de criaturas</p>
   ${has?`<button class="big" onclick="${Hk(continueGame)}">Continuar</button>`:""}<button class="big" onclick="${Hk(nameScreen)}">Nueva partida</button>
-  ${canSave?"":"<p class='warn'>Tu navegador no permite guardar: la partida no se guardará.</p>"}${canFS()?`<button onclick="${Hk(goFS)}">Pantalla completa</button>`:""}
+  ${canSave?"":"<p class='warn'>Tu navegador no permite guardar: la partida no se guardará.</p>"}${canFS()?`<button onclick="${Hk(goFS)}">Pantalla completa</button>`:""}${vibBtn(Hk)}
   <p class="tiny">A: hablar/confirmar · B: cancelar (mantén para correr) · MENÚ</p></div>`,"clear");
 }
 function nameScreen(){OV(()=>`<h2>¿Cómo te llamas?</h2><input id="nm" maxlength="10" value="Jon"><div class="row"><button onclick="${Hk(()=>barrioScreen($("nm").value.replace(/[<>&"'\x60\\]/g,"").trim()||"Jon"))}">Siguiente</button></div>`);}
@@ -1179,7 +1190,7 @@ function mainMenu(){
   if(DQ)return;scene="menu";sfx("menu");if(S.act===0&&!S.tutMenu){S.tutMenu=1;setTimeout(()=>{if(scene==="world")tutCheck();},0);}
   OV(()=>`<h2>Menú</h2><p class="info">${S.name} · ${DATA.zones[S.home].name} · ${S.fichas} fichas · ${["Prólogo","","","Liga de barrios ("+(S.seqI||0)+"/7)","La final","Post-juego"][S.act]}</p>
   <div class="col"><button onclick="${Hk(()=>teamScreen(mainMenu))}">Equipo</button><button onclick="${Hk(()=>mapScreen())}">Mapa</button><button onclick="${Hk(()=>albumScreen(0))}">Álbum</button><button onclick="${Hk(itemsScreen)}">Objetos</button>
-  <button onclick="${Hk(()=>{const ok=save();say([ok?"Partida guardada.":"No se ha podido guardar en este navegador."]);closeMenu();})}">Guardar</button><button onclick="${Hk(closeMenu)}">Cerrar</button></div>${questLog()}`);
+  <button onclick="${Hk(()=>{const ok=save();say([ok?"Partida guardada.":"No se ha podido guardar en este navegador."]);closeMenu();})}">Guardar</button>${vibBtn(Hk)}<button onclick="${Hk(closeMenu)}">Cerrar</button></div>${questLog()}`);
 }
 function closeMenu(){ovHide();scene="world";if(S&&S.act===0)tutCheck();}
 function questLog(){
@@ -1783,7 +1794,7 @@ function ballUpdate(dt){
 function applyDuel(mine,theirs,win){
   const wn=win?mine:theirs,ls=win?theirs:mine;M.cd=2;
   ls.stun=1.1;wn.imm=2.2;ls.path=[];give(wn);const d=dist(ls.x,ls.y,wn.x,wn.y)||1;ls.vx=(ls.x-wn.x)/d*70*SPF;ls.vy=(ls.y-wn.y)/d*70*SPF;
-  if(!M.sim){fxAt("impacto",(ls.x+wn.x)/2,(ls.y+wn.y)/2,.8,-10);fxAt("polvo",ls.x,ls.y,.7,-4);M.shake=Math.max(M.shake,.08);}
+  if(!M.sim){if(ls.ti===0||wn.ti===0)hap(ls.ti===0?[25,30,15]:18);fxAt("impacto",(ls.x+wn.x)/2,(ls.y+wn.y)/2,.8,-10);fxAt("polvo",ls.x,ls.y,.7,-4);M.shake=Math.max(M.shake,.08);}
 }
 // DECISIÓN: antes cada roce abría la pantalla de duelo (~80 por partido). Ahora el duelo se resuelve solo en el campo con la mejor acción
 // (mismas stats y tipos). DECISIÓN: ya no se abre ninguna pantalla en mitad del partido; la entrada (K / TIRO sin balón) da +12 %.
@@ -1856,7 +1867,7 @@ function flightStep(dt){
   const res=F.res,SH=F.SH;M.flight=null;k.dive=0;
   if(res==="parada"){fxAt("destello",k.x,k.y,1,-12);sfx("bien");M.pops.push({x:k.x,y:k.y,t:1.2,s:"¡PARADÓN!",c:"#7cc050"});}
   else if(res==="despeje"){fxAt("impacto",k.x,k.y,.8,-10);sfx("duelo");M.pops.push({x:k.x,y:k.y,t:1,s:"¡Despeje!",c:"#9fc6d6"});}
-  else if(res==="poste"){fxAt("impacto",F.tx,F.ty,.9,-6);TSND.metal();M.shake=.15;M.pops.push({x:F.tx,y:F.ty,t:1.2,s:"¡AL POSTE!",c:"#d6dde3"});}
+  else if(res==="poste"){fxAt("impacto",F.tx,F.ty,.9,-6);TSND.metal();hap([35,25,20]);M.shake=.15;M.pops.push({x:F.tx,y:F.ty,t:1.2,s:"¡AL POSTE!",c:"#d6dde3"});}
   else if(res==="bloqueo"){fxAt("onda",F.tx,F.ty,.8,-8);sfx("duelo");M.pops.push({x:F.tx,y:F.ty,t:1,s:"¡Bloqueado!",c:"#f08a3a"});}
   applyShot(SH,res);
 }
@@ -1898,7 +1909,7 @@ function matchUpdate(dt){
 // Prioridad: joystick táctil > flechas > ratón (el jugador corre hacia el cursor y frena al llegar). M.kbT = tiempo sin control directo.
 function readInput(dt){
   const dx=(held.includes(2)?1:0)-(held.includes(1)?1:0),dy=(held.includes(0)?1:0)-(held.includes(3)?1:0),c=M.ctrl;let v=null,go=false;
-  if(M.joy){const l=Math.hypot(M.joy.v[0],M.joy.v[1]);if(l>.22){const k=Math.min(1,l/.55)/l;v=dirV2S(M.joy.v[0]*k,M.joy.v[1]*k);M.aim=nrm(v);go=true;}} // a media carrera del joystick ya va a tope
+  if(M.joy){const l=Math.hypot(M.joy.v[0],M.joy.v[1]);if(l>.14){const k=Math.min(1,(l-.08)/.42)/l;v=dirV2S(M.joy.v[0]*k,M.joy.v[1]*k);M.aim=nrm(v);go=true;}} // a media carrera del joystick ya va a tope
   else if(dx||dy){const l=Math.hypot(dx,dy);v=dirV2S(dx/l,dy/l);M.aim=v;go=true;}
   else if(M.mouse&&c&&c.ti===0&&M.state!=="intro"){const[x,y]=mSim(M.mouse[0],M.mouse[1]),ex=x-c.x,ey=y-c.y,d=Math.hypot(ex,ey);if(d>2)M.aim=[ex/d,ey/d];const k=d>4?Math.min(1,(d-4)/(10*SPF))/d:0;v=[ex*k,ey*k];}
   if(v){M.kb=v;M.kbT=0;if(go&&M.state==="kick"&&M.kickTeam===0){M.state="play";whistle();}if(c&&c.path.length)c.path=[];}
@@ -1942,7 +1953,7 @@ function finishMatch(){
 function togglePause(){
   if(!M||scene!=="match"||!["play","kick","intro"].includes(M.state))return;
   M.paused=!M.paused;
-  if(M.paused)panel(`<div class="ptitle">Pausa</div><div class="prow"><button class="act" onclick="${PH(togglePause)}">Reanudar</button><button class="act" onclick="${PH(()=>{M.paused=false;M.forfeit=1;M.sc=[0,Math.max(3,M.sc[1])];finishMatch();})}">Abandonar</button></div>`);
+  if(M.paused)panel(`<div class="ptitle">Pausa</div><div class="prow"><button class="act" onclick="${PH(togglePause)}">Reanudar</button><button class="act" onclick="${PH(()=>{M.paused=false;M.forfeit=1;M.sc=[0,Math.max(3,M.sc[1])];finishMatch();})}">Abandonar</button>${vibBtn(PH)}</div>`);
   else matchHint();
 }
 // ---- Penaltis ----
@@ -2177,15 +2188,21 @@ function tackle(){
 function mPos(e){const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H];}
 const mSim=(sx,sy)=>Vinv(sx/ZM,sy/ZM);
 const joyR=()=>Math.round(50/SCALE);
+// Joystick flotante: nace donde pones el dedo (mitad izquierda) y, si arrastras más allá del borde, la base te sigue.
+// Antes se quedaba "pegado": si el dedo se soltaba fuera del partido (pantalla de tiro, pausa) el joystick viejo seguía vivo y no se podía coger otro.
+const PTR=new Set();
 function mDown(e){
   if(!M||M.paused)return;const[sx,sy]=mPos(e);
-  if(M.state==="intro"){M.st=Math.min(M.st,.25);return;}
+  if(M.state==="intro")M.st=Math.min(M.st,.25);
   if(e.pointerType==="mouse"){M.mouse=[sx,sy];return;}
-  if(!M.joy&&sx<W*.5&&M.state!=="pens")M.joy={id:e.pointerId,x0:sx,y0:sy,x:0,y:0,v:[0,0]}; // joystick donde pongas el dedo
+  if(M.joy&&!PTR.has(M.joy.id))M.joy=null;
+  if(!M.joy&&sx<W*.5&&M.state!=="pens"){M.joy={id:e.pointerId,x0:sx,y0:sy,x:0,y:0,v:[0,0],edge:false};hap(8);}
 }
 function mMove(e){
-  if(!M||!M.joy||e.pointerId!==M.joy.id)return;const[sx,sy]=mPos(e),R=joyR(),dx=sx-M.joy.x0,dy=sy-M.joy.y0,l=Math.hypot(dx,dy)||1,k=Math.min(1,R/l);
-  M.joy.x=dx*k;M.joy.y=dy*k;M.joy.v=[M.joy.x/R,M.joy.y/R];
+  if(!M||!M.joy||e.pointerId!==M.joy.id)return;const j=M.joy,[sx,sy]=mPos(e),R=joyR();let dx=sx-j.x0,dy=sy-j.y0,l=Math.hypot(dx,dy);
+  if(l>R*1.15){const k=(l-R*1.15)/l;j.x0+=dx*k;j.y0+=dy*k;dx=sx-j.x0;dy=sy-j.y0;l=Math.hypot(dx,dy);}
+  const k=l>R?R/l:1;j.x=dx*k;j.y=dy*k;j.v=[j.x/R,j.y/R];
+  const e2=l>=R*.95;if(e2&&!j.edge)hap(5);j.edge=e2;
 }
 function mUp(e){if(M&&M.joy&&e.pointerId===M.joy.id)M.joy=null;}
 // Botones táctiles: iconos PixelLab; el de tiro cambia a "robar" cuando no tienes el balón.
@@ -2784,7 +2801,8 @@ function mgJuice(m,dt){const F=mgFx(m),g=m.g,sc=+g.sc||0;
   if(F.med===null)F.med=md;else if(md>F.med){F.toast={s:"¡"+MEDN[md].toUpperCase()+"!",c:MEDC[md],t:1.4};[784,988,1319].forEach((f,i)=>tone(f,.09,"square",.04,i*.07));F.med=md;}else F.med=md;
   const left=g.dur?g.dur-m.t:null;if(left!==null&&left<=5&&left>0){const k=Math.ceil(left);if(k!==F.tick){F.tick=k;tone(k===1?1320:880,.05,"square",.04);}}}
 function mgFxStep(m,dt){const F=mgFx(m);F.pops.forEach(p=>p.t+=dt);F.pops=F.pops.filter(p=>p.t<.8);F.rip.forEach(r=>r.t+=dt);F.rip=F.rip.filter(r=>r.t<.35);
-  F.shake=Math.max(0,F.shake-dt);F.flash=Math.max(0,F.flash-dt);if(F.sk&&(F.sk.t-=dt)<=0)F.sk=null;if(F.toast&&(F.toast.t-=dt)<=0)F.toast=null;}
+  if(F.shake>(F.hk||0)+.04)hap(Math.round(12+Math.min(.5,F.shake)*80));
+  F.shake=Math.max(0,F.shake-dt);F.hk=F.shake;F.flash=Math.max(0,F.flash-dt);if(F.sk&&(F.sk.t-=dt)<=0)F.sk=null;if(F.toast&&(F.toast.t-=dt)<=0)F.toast=null;}
 function mgUpdate(dt){const m=MG2;if(!m)return;partsStep(dt);mgFxStep(m,dt);
   if(m.st==="cnt"){const a=Math.ceil(m.cnt/.8);m.cnt-=dt;const b=Math.ceil(m.cnt/.8);if(b!==a&&b>0)tone(660,.08,"square",.05);if(m.cnt<=0){m.st="play";tone(1320,.18,"square",.05);}return;}
   if(m.st==="play"){m.t+=dt;m.def.up(m.g,dt,m.d);mgJuice(m,dt);if(m.g.done||(m.g.dur&&m.t>=m.g.dur))mgFinish();}else if(m.st==="res")m.at+=dt;}
@@ -3643,16 +3661,17 @@ $("bSnd").addEventListener("click",()=>{auInit();toggleSound();});
 $("bPause").addEventListener("click",togglePause);
 $("dlg").addEventListener("pointerdown",e=>{if(DQ&&!DQ.ask){e.preventDefault();advance();}});
 let cvDown=false;
-cv.addEventListener("pointerdown",e=>{e.preventDefault();auInit();cvDown=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}if(scene==="match")mDown(e);else if(scene==="mini")miniDown(e);else if(scene==="shot"){if(CS&&CS.aiming){const[sx,sy]=mPos(e),cd=(CS.cards||[]).find(c=>sx>=c.x&&sx<c.x+c.w&&sy>=c.y&&sy<c.y+c.h);if(cd)csPickTech(cd.t);else{const z=csZone(sx,sy);if(z){CS.aiming.h=z;csAimPick(z);}}}else csSkip();}else if(scene==="mg")mgInput("dn",e);else if(scene==="feria")feriaIn("dn",e);});
+cv.addEventListener("pointerdown",e=>{e.preventDefault();auInit();cvDown=true;PTR.add(e.pointerId);try{cv.setPointerCapture(e.pointerId);}catch(_){}if(scene==="match")mDown(e);else if(scene==="mini")miniDown(e);else if(scene==="shot"){if(CS&&CS.aiming){const[sx,sy]=mPos(e),cd=(CS.cards||[]).find(c=>sx>=c.x&&sx<c.x+c.w&&sy>=c.y&&sy<c.y+c.h);if(cd)csPickTech(cd.t);else{const z=csZone(sx,sy);if(z){CS.aiming.h=z;csAimPick(z);}}}else csSkip();}else if(scene==="mg")mgInput("dn",e);else if(scene==="feria")feriaIn("dn",e);});
 // Ratón sin pulsar: en el partido el jugador sigue al cursor; en la pantalla de tiro marca la zona.
 cv.addEventListener("pointermove",e=>{if(e.pointerType!=="mouse")return;const p=mPos(e);if(scene==="match"&&M)M.mouse=p;else if(scene==="shot")csAimHover(p[0],p[1]);else if(scene==="feria")feriaIn("hv",e);});
 cv.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse"&&M)M.mouse=null;});
 cv.addEventListener("pointermove",e=>{if(!cvDown&&!(scene==="match"&&M&&M.joy))return;if(scene==="match")mMove(e);else if(scene==="mini")miniMove(e);else if(scene==="mg")mgInput("mv",e);else if(scene==="feria")feriaIn("mv",e);});
-cv.addEventListener("pointerup",e=>{cvDown=false;if(scene==="match")mUp(e);else if(scene==="mg")mgInput("upp",e);else if(scene==="feria")feriaIn("up",e);});
-cv.addEventListener("pointercancel",()=>{cvDown=false;if(M){M.drag=null;M.joy=null;}});
+cv.addEventListener("pointerup",e=>{cvDown=false;PTR.delete(e.pointerId);mUp(e);if(scene==="mg")mgInput("upp",e);else if(scene==="feria")feriaIn("up",e);});
+cv.addEventListener("pointercancel",e=>{cvDown=false;PTR.delete(e.pointerId);if(M){M.drag=null;mUp(e);}});
+cv.addEventListener("lostpointercapture",e=>{PTR.delete(e.pointerId);mUp(e);});
 // Botones táctiles estilo Brawl Stars: tocar = actuar hacia donde apunta el joystick; arrastrar desde el botón = apuntar a mano (se suelta y sale).
 [["mP","pass"],["mS","shoot"],["mX","super"]].forEach(([id,a])=>{const b=$(id);let st=null;
-  b.addEventListener("pointerdown",e=>{e.preventDefault();auInit();b.classList.add("on");if(!M||scene!=="match")return;if(!myBall()){matchAct(a);return;}
+  b.addEventListener("pointerdown",e=>{e.preventDefault();auInit();b.classList.add("on");hap(10);if(!M||scene!=="match")return;if(!myBall()){matchAct(a);return;}
     try{b.setPointerCapture(e.pointerId);}catch(_){}st={x:e.clientX,y:e.clientY};});
   b.addEventListener("pointermove",e=>{if(!st||!M)return;const dx=e.clientX-st.x,dy=e.clientY-st.y;M.aimDrag=Math.hypot(dx,dy)>14?nrm(dirV2S(dx,dy)):null;});
   ["pointerup","pointercancel"].forEach(ev=>b.addEventListener(ev,()=>{b.classList.remove("on");if(!st)return;st=null;const aim=M&&M.aimDrag;if(M)M.aimDrag=null;if(ev==="pointerup")matchAct(a,aim||undefined);}));});
