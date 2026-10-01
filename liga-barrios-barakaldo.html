@@ -4105,6 +4105,191 @@ FERIA.G.soka={n:"Soka-tira",d:"Herri kirolak: tira al ritmo y aguanta cuando gri
    else{fBtn("aguanta",W/2-gw/2,by,gw*.42,bh,"AGUANTA",{col:g.anch?"#6ad1c4":"#4fb0e8",lit:!!g.warn,key:"a"});fBtn("tira",W/2-gw/2+gw*.46,by,gw*.54,bh,"¡TIRA!",{col:"#e0552b",fg:"#fff",off:g.st!=="tira"||g.anch});}}
 };
 FERIA.order.push("soka");
+// ---- Frontón a mano: tu pelotari contra el de otro barrio, a 7 tantos ----
+// Habilidad: golpea cuando el aro se cierra sobre la pelota (a tiempo: rápida, baja y precisa; a destiempo: lenta, alta o a la chapa).
+// Estrategia: tú eliges dónde bota (toca la cancha). Lejos del rival gana tiempo, pero cerca de las rayas se va fuera.
+// Reglas: la pelota debe dar en el frontis por encima de la chapa, botar dentro (izquierda de la raya lateral, antes del cuadro 7)
+// y el que recibe la devuelve antes del segundo bote. El saque debe botar entre la falta (cuadro 3) y la pasa (cuadro 6).
+const FRT={CW:10,CL:28,WH:10,chapa:.9,falta:12,pasa:24,to:7,cost:10,g:9.8,e:.72,step:1/120};
+function gauss(){return Math.sqrt(-2*Math.log(1-rnd()))*Math.cos(6.2832*rnd());}
+function frtPel(cs){const c=cs.slice().sort((a,b)=>cStat(b,"vel")+cStat(b,"tir")-cStat(a,"vel")-cStat(a,"tir"))[0];return{c,vel:cStat(c,"vel"),tir:cStat(c,"tir")};}
+function frtRivals(){const lv=avgLvl(),zs=DATA.zones.map((z,i)=>i).filter(i=>DATA.zones[i].roster).sort(()=>rnd()-.5).slice(0,3);
+  return[[-2,20,"Fácil"],[1,30,"Media"],[4,45,"Difícil"]].map(([d,pr,nm],k)=>{const z=zs[k%zs.length],T=zoneTeam(z,Math.max(3,lv+d));return{z,name:T.name,lv:lv+d,pr,nm,pel:frtPel(T.cre),ai:k};});}
+// Un paso de física. Devuelve los contactos: "wall"/"chapa"/"alto" (frontis), "lw" (pared izquierda), "floor".
+function frtStep(b,h){const ev=[];b.vy-=FRT.g*h;b.x+=b.vx*h;b.y+=b.vy*h;b.z+=b.vz*h;
+  if(b.z<=0&&b.vz<0){b.z=0;b.vz=-b.vz*FRT.e;ev.push(b.y<FRT.chapa?"chapa":b.y>FRT.WH?"alto":"wall");}
+  if(b.x<=0&&b.vx<0){b.x=0;b.vx=-b.vx*.7;ev.push("lw");}
+  if(b.y<=0&&b.vy<0){b.y=0;b.vy=-b.vy*.58;b.vx*=.85;b.vz*=.85;ev.push("floor");}
+  return ev;}
+// Calidad del golpe según el error de tiempo (s)
+function frtQ(dt){dt=Math.abs(dt);return dt<.045?1:clamp(1-(dt-.045)/.215,0,1)*.85;}
+function frtJudge(q){return q>=1?["¡PERFECTA!","#f5d142"]:q>=.6?["BUENA","#7cc050"]:q>=.3?["JUSTA","#e9b949"]:["¡A DESTIEMPO!","#e0552b"];}
+// Golpe: la pelota sale hacia el frontis a una altura hw y bota en (tx,tz). Resuelve la parábola de forma exacta.
+function frtShoot(g,P,q,tx,tz,serve){const b=g.b,pl=g.P[P],acc=1.25-pl.tir/99*.5;
+  const sd=(.2+(1-q)*1.1)*acc;tx+=gauss()*sd;tz+=gauss()*sd*1.2;
+  let hw=q>=1?1.2+rnd()*.5:q>=.6?2.6+rnd()*1.4:4.5+rnd()*3.5;
+  if(q<.3&&rnd()<.55-q)hw=.25+rnd()*.5;// pifia: a la chapa
+  const bz=Math.max(1.5,b.z),by=clamp(b.y,.3,2.2),dd=tz/FRT.e,D=bz+dd;hw=Math.max(hw,by*dd/D+.05);
+  let u=Math.sqrt(2*(hw*D-by*dd)/(FRT.g*bz*D*dd));u=Math.max(u,1/34);
+  const a=(FRT.g*D*D*u*u/2-by)/D;Object.assign(b,{z:bz,y:by,vz:-1/u,vy:a/u,vx:(tx-b.x)/(D*u),st:"go",bn:0,by:P,serve:!!serve,tr:[]});
+  pl.sw=.3;g.hits++;g.lastQ=q;if(P===0||g.showAi){const[s,c]=frtJudge(q);g.judge={s,c,t:.9,P};}
+  if(!g.fast){tone(170+q*90,.05,"square",.06);noise(.04,.07);if(q>=1)tone(1320,.08,"triangle",.04);}
+  const R=1-P;g.P[R].plan=frtPlan(g,R);g.P[P].plan=null;if(R===1||g.auto)g.P[R].swAt=g.P[R].plan.ok&&!g.P[R].plan.out?g.P[R].plan.t+gauss()*g.P[R].sd:null;g.swung=false;g.late=false;}
+// Predice la pelota y elige dónde y cuándo golpearla el receptor R
+function frtPlan(g,R){const b={...g.b},pl=g.P[R],h=1/60;let st=b.st,bn=0,land=null,cands=[];
+  for(let t=h;t<4;t+=h){const ev=frtStep(b,h);for(const e of ev){if(st==="go"&&e!=="lw"){st=e==="wall"?"back":"bad";}else if(st==="back"&&e==="floor"){bn++;if(bn===1)land={x:b.x,z:b.z};}}
+    if(st==="bad"||bn>=2)break;if(st!=="back")continue;
+    if((bn===0&&b.y<1.8&&b.y>.5&&b.z>5)||(bn===1&&b.y>.25&&b.y<1.5)){const sx=b.x-.45,sz=b.z+.25,need=Math.hypot(sx-pl.x,sz-pl.z)/pl.spd+pl.react;cands.push({t:g.t+t,x:sx,z:sz,bn,dn:b.vy<0,ok:need<=t,late:need-t});}
+    if(b.z>FRT.CL+4||b.x>FRT.CW+5)break;}
+  const out=st==="bad"||!land||land.x>FRT.CW||land.z>FRT.CL||(g.b.serve&&(land.z<FRT.falta||land.z>FRT.pasa));
+  const c=cands.find(c=>c.ok&&c.bn===1&&c.dn)||cands.find(c=>c.ok&&c.bn===1)||cands.find(c=>c.ok)||cands.slice().sort((a,b)=>a.late-b.late)[0];
+  return c?{...c,out,land}:{t:g.t+9,x:pl.x,z:pl.z,ok:false,out,land};}
+// La IA busca el hueco: lejos del rival, con margen a las rayas según su nivel
+function frtAiTarget(g,P,serve){const o=g.P[1-P],m=g.P[P].mg;let best=null,bs=-1e9;
+  const xs=[m,FRT.CW*.5,FRT.CW-m],zs=serve?[FRT.falta+2.5,(FRT.falta+FRT.pasa)/2,FRT.pasa-1.6]:[9,17,FRT.CL-m*1.2];
+  xs.forEach(x=>zs.forEach(z=>{const s=Math.hypot(x-o.x,z-o.z)/o.spd+rnd()*.5;if(s>bs){bs=s;best=[x,z];}}));return best;}
+FERIA.G.fronton={n:"Frontón",d:"Pelota a mano contra el pelotari de otro barrio. Tú eliges dónde bota; el tiempo del golpe hace el resto.",min:FRT.cost,
+ ic(g){g.fillStyle="#c9cdb8";g.fillRect(0,0,32,20);g.fillStyle="#8c939a";g.fillRect(0,17,32,3);g.fillStyle="#b3202a";g.fillRect(0,2,32,2);g.fillStyle="#3f6b52";g.fillRect(0,20,32,12);g.fillStyle="#fff";g.fillRect(19,10,4,4);g.fillStyle="#efe3c8";g.fillRect(0,26,32,1);},
+ odds:[`Entrada: ${FRT.cost} fichas. Partido a ${FRT.to} tantos; quien gana el tanto saca.`,"Rival fácil: 20 fichas · medio: 30 · difícil: 45 y su pelotari se une a tu equipo.","Tu pelotari es tu criatura con más Velocidad + Tiro: la Velocidad le hace llegar, el Tiro afina la colocación.","Golpe a ±0,045 s: perfecta (rápida y baja). Hasta ±0,26 s: cada vez más alta, lenta e imprecisa; muy a destiempo puede ir a la chapa.","Falta: bota a la derecha de la raya o antes del frontis. Pasa: bota más allá del cuadro 7 (en el saque, más allá del 6)."],
+ init(g){Object.assign(g,{st:"elige",R:frtRivals(),me:frtPel(S.team),prizes:[],t:0,ax:FRT.CW*.5,az:20,hits:0});},
+ canExit(g){return g.st==="elige"||g.st==="fin";},exitLines(g){return g.prizes;},
+ start(g,i){const d=FERIA.G.fronton,R=g.R[i];if(!g.auto&&!feriaPay(FRT.cost,feriaSt().free>0)){fMsg(feriaWhyNot(FRT.cost),"#e0552b");return;}
+   g.riv=R;g.score=[0,0];g.sv=0;g.rally=0;g.longest=0;const mk=(p,i,ai)=>({c:p.c,tir:p.tir,spd:3.4+p.vel/99*2.6+(ai>=0?[-.4,-.15,0][ai]:0),react:ai>=0?[.32,.25,.2][ai]:.12,sd:ai>=0?[.1,.075,.05][ai]:g.autoSd||.06,mg:ai>=0?[2.3,1.6,1.05][ai]:1.4,x:4,z:20,sw:0,plan:null,swAt:null});
+   g.P=[mk(g.me,0,-1),mk(R.pel,1,R.ai)];d.serve(g);},
+ serve(g){const s=g.sv;Object.assign(g,{st:"saque",t0:g.t,judge:g.judge&&g.judge.t>0?g.judge:null,call:null,swung:false,late:false,rally:0});
+   g.P[s].x=FRT.CW*.55;g.P[s].z=16;g.P[1-s].x=FRT.CW*.6;g.P[1-s].z=23.5;g.P.forEach(p=>{p.plan=null;p.swAt=null;});
+   g.b={x:g.P[s].x+.45,y:1,z:15.75,vx:0,vy:0,vz:0,st:"hold",bn:0,by:s,tr:[]};
+   if(s===1||g.auto){g.P[s].svAt=g.t+1.1+rnd()*.5;}},
+ // Bote del saque: la pelota sube y baja en la mano; lo ideal es golpear en lo alto del bote
+ bote(g){const ph=((g.t-g.t0)/.8)%1;return{y:.35+Math.sin(ph*Math.PI)*.85,ph};},
+ swing(g,P){const d=FERIA.G.fronton,pl=g.P[P];
+   if(g.st==="saque"&&g.sv===P){const{ph}=d.bote(g),q=P===1||g.auto?frtQ(gauss()*pl.sd):frtQ((ph-.5)*.8);let[tx,tz]=P===0&&!g.auto?[g.ax,g.az]:frtAiTarget(g,P,true);g.st="juego";g.b.y=d.bote(g).y;frtShoot(g,P,q,tx,tz,true);return;}
+   if(g.st!=="juego"||g.b.by===P||g.b.st==="hold")return;const pn=pl.plan;if(!pn)return;
+   const dt=g.t-pn.t;if(dt<-.45&&P===0){g.judge={s:"¡ESPERA!",c:"#efe3c8",t:.5,P};return;}
+   if(g.swung&&P===0)return;g.swung=true;pl.sw=.3;
+   const near=pn.ok&&Math.hypot(pn.x-pl.x,pn.z-pl.z)<.9&&g.b.y<2.6&&g.b.st==="back";
+   if(Math.abs(dt)>.26||!near){if(P===0)g.judge={s:dt<0?"¡PRONTO!":"¡TARDE!",c:"#e0552b",t:.8,P};if(!g.fast)tone(240,.06,"triangle",.03);return;}
+   let tx=g.ax,tz=g.az;if(P===1||g.auto)[tx,tz]=frtAiTarget(g,P,false);g.rally++;g.longest=Math.max(g.longest,g.rally);frtShoot(g,P,frtQ(dt),tx,tz,false);},
+ point(g,w,call){const d=FERIA.G.fronton;if(g.st!=="juego")return;g.st="punto";g.score[w]++;g.call={s:call,w,t:0};g.sv=w;
+   if(!g.fast){w===0?SFX.gol():sfx("mal");}
+   const done=g.score[w]>=FRT.to;g.pt=g.fast?0:1.9;g.done=done;},
+ btn(g,id){const d=FERIA.G.fronton;if(g.st==="elige"&&id.startsWith("riv"))return d.start(g,+id[3]);if(id==="otra"&&g.st==="fin"){g.R=frtRivals();g.st="elige";return;}
+   if(id==="dar")d.swing(g,0);},
+ key(g,k){const d=FERIA.G.fronton;if(g.st==="elige"&&"123".includes(k)&&k.length===1)return d.start(g,+k-1);
+   if(k===" "||k==="Enter"){if(g.st==="fin")return d.btn(g,"otra");d.swing(g,0);return;}
+   const mv={ArrowLeft:[-1.5,0],ArrowRight:[1.5,0],ArrowUp:[0,-3],ArrowDown:[0,3],a:[-1.5,0],d:[1.5,0],w:[0,-3],s:[0,3]}[k];
+   if(mv){g.ax=clamp(g.ax+mv[0],-.5,FRT.CW+.5);g.az=clamp(g.az+mv[1],2,FRT.CL+.5);g.aimT=1.2;}},
+ aim(g,x,y){if(!g.cam||g.st==="elige"||g.st==="fin")return;const c=g.cam,p=c.un(x,y);if(p){g.ax=clamp(p[0],-.5,FRT.CW+.5);g.az=clamp(p[1],2,FRT.CL+.5);g.aimT=1.2;}},
+ // Ratón: apuntar al mover, golpear al pulsar. Táctil: tocar y arrastrar apunta, soltar golpea.
+ hv(g,x,y){FERIA.G.fronton.aim(g,x,y);},
+ dn(g,x,y,e){const d=FERIA.G.fronton;if(g.st==="elige"||g.st==="fin")return;d.aim(g,x,y);if(e&&e.pointerType==="touch")g.tch=true;else d.swing(g,0);},
+ mv(g,x,y){if(g.tch)FERIA.G.fronton.aim(g,x,y);},
+ pu(g){if(g.tch){g.tch=false;FERIA.G.fronton.swing(g,0);}},
+ up(g,dt){const d=FERIA.G.fronton;g.t+=dt;if(g.judge&&(g.judge.t-=dt)<=0)g.judge=null;if(g.aimT>0)g.aimT-=dt;
+   if(g.st==="elige"||g.st==="fin")return;
+   g.P.forEach(p=>{p.sw=Math.max(0,p.sw-dt);});
+   if(g.st==="punto"){g.call.t+=dt;if((g.pt-=dt)<=0){if(g.done)d.finish(g);else d.serve(g);}}
+   if(g.st==="saque"){const s=g.P[g.sv],{y}=d.bote(g);g.b.y=y;g.b.x=s.x+.45;g.b.z=s.z-.25;if(s.svAt&&g.t>=s.svAt){const ph=((g.t-g.t0)/.8)%1;if(Math.abs(ph-.5)<.5){s.svAt=null;d.swing(g,g.sv);}}
+     if(g.sv===0&&!g.auto&&g.t-g.t0>12){d.swing(g,0);}}
+   // pelotaris: el receptor corre a su punto; el otro vuelve al centro
+   g.P.forEach((p,i)=>{let tx,tz;if(g.st==="juego"&&p.plan&&g.b.by!==i){tx=p.plan.x;tz=p.plan.z;}else if(g.st==="juego"){tx=FRT.CW*.45+(i?1.4:-1.4);tz=g.b.st==="go"?18.5:19.5;}else return;
+     const dx=tx-p.x,dz=tz-p.z,dd=Math.hypot(dx,dz),st=Math.min(dd,p.spd*dt*(p.plan&&g.b.by!==i?1:.6));if(dd>.01){p.x+=dx/dd*st;p.z+=dz/dd*st;p.run=st>.001;}else p.run=false;
+     if(g.st==="juego"&&(i===1||g.auto)&&p.swAt!=null&&g.b.by!==i&&g.t>=p.swAt){p.swAt=null;d.swing(g,i);}});
+   if(g.st!=="juego")return;
+   if(g.P[0].plan&&!g.swung&&!g.late&&g.b.by===1&&g.t>g.P[0].plan.t+.26&&!g.auto){g.late=true;}
+   // física con subpasos fijos y reglas
+   const b=g.b;let n=Math.min(12,Math.ceil(dt/FRT.step));const h=dt/n;
+   for(let k=0;k<n&&g.st==="juego";k++){const ev=frtStep(b,h);
+     for(const e of ev){
+       if(e==="wall"&&b.st==="go"){b.st="back";if(!g.fast){tone(120,.06,"triangle",.07);noise(.03,.05);}}
+       else if((e==="chapa"||e==="alto")&&b.st==="go"){if(!g.fast){if(e==="chapa"){tone(900,.25,"square",.04);tone(1340,.2,"square",.03);}}d.point(g,1-b.by,e==="chapa"?"¡CHAPA!":"¡ALTA!");}
+       else if(e==="floor"){if(!g.fast)noise(.02,.03);
+         if(b.st==="go"){d.point(g,1-b.by,"¡FALTA!");}
+         else if(b.st==="back"){b.bn++;if(b.bn===1){if(b.x>FRT.CW||(b.serve&&b.z<FRT.falta))d.point(g,1-b.by,"¡FALTA!");else if(b.z>FRT.CL||(b.serve&&b.z>FRT.pasa))d.point(g,1-b.by,"¡PASA!");else{b.lx=b.x;b.lz=b.z;b.lt=.6;}}
+           else if(b.bn>=2)d.point(g,b.by,"¡TANTO!");}}
+       else if(e==="lw"&&!g.fast)tone(110,.04,"triangle",.04);}
+     if(g.st!=="juego")break;
+     if(b.st==="back"&&(b.z>FRT.CL+4||b.x>FRT.CW+5)){d.point(g,b.bn===0?1-b.by:b.by,b.bn===0?(b.x>FRT.CW+5?"¡FALTA!":"¡PASA!"):"¡TANTO!");}}
+   if(b.lt>0)b.lt-=dt;
+   if(!g.fast){b.tr.push([b.x,b.y,b.z]);if(b.tr.length>7)b.tr.shift();}},
+ finish(g){g.st="fin";g.call=null;const won=g.score[0]>g.score[1];g.won=won;if(won&&!g.auto){const R=g.riv;feriaGain(R.pr);g.prizes.push(`Ganas al frontón a ${R.name} (${g.score[0]}-${g.score[1]}): +${R.pr} fichas.`);if(R.ai===2)g.prizes.push(feriaCre("n",R.pel.c.sp));}if(!g.auto)save();},
+ dr(g){const d=FERIA.G.fronton,port=H>W,{CW,CL,WH}=FRT;
+   // cámara detrás y por encima del cuadro 7, mirando al frontis
+   const camX=CW*.53,camZ=CL+(port?14:22),zB=CL+1,dzB=camZ-zB,top=SAFE.t+34,bot=H-SAFE.b-(port?54:34),F1=(W/2-2)*dzB/Math.max(camX+.6,(port?CW+1.4:CW+3)-camX);
+   // en vertical la cámara sube hasta que la cancha llena el alto disponible
+   const camY=port?clamp(((bot-top)/F1-(WH+1)/camZ)/(1/dzB-1/camZ),9,40):9;
+   const F=Math.min((W/2-2)*dzB/Math.max(camX+.6,(port?CW+1.4:CW+3)-camX),(bot-top)/(camY/dzB-(camY-WH-1)/camZ)),hy=top-(camY-WH-1)*F/camZ,cxs=W/2;
+   const P=(x,y,z)=>{const s=F/Math.max(.4,camZ-z);return[cxs+(x-camX)*s,hy+(camY-y)*s,s];};
+   g.cam={P,un:(sx,sy)=>{const dz=F*camY/(sy-hy);if(!(dz>0))return null;const z=camZ-dz;return[camX+(sx-cxs)*dz/F,z];}};
+   const poly=(col,pts)=>{ctx.fillStyle=col;ctx.beginPath();pts.forEach(([x,y,z],i)=>{const p=P(x,y,z);i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);});ctx.closePath();ctx.fill();};
+   const line=(col,w,a,b)=>{const p=P(...a),q=P(...b);ctx.strokeStyle=col;ctx.lineWidth=Math.max(1,w*Math.min(p[2],q[2]));ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);ctx.stroke();};
+   const sky=ctx.createLinearGradient(0,0,0,H*.5);sky.addColorStop(0,"#6fa9d6");sky.addColorStop(1,"#d6e8ef");ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+   // monte al fondo sobre el frontis
+   const pt=P(0,WH+1,0);ctx.fillStyle="#6a8f62";ctx.beginPath();ctx.moveTo(0,pt[1]+4);for(let x=0;x<=W;x+=6)ctx.lineTo(x,pt[1]-10-Math.sin(x*.02)*8-Math.sin(x*.07)*3);ctx.lineTo(W,pt[1]+4);ctx.fill();
+   // graderío a la derecha (contracancha y gradas con público)
+   const XS=CW+3;poly("#5d6a60",[[CW,0,0],[XS,0,0],[XS,0,CL+6],[CW,0,CL+6]]);
+   const r=srand(41);for(let k=0;k<7;k++){const x0=XS+k*1.1,y0=k*.75;poly(k%2?"#9a958a":"#aaa598",[[x0,y0,0],[x0,y0+.75,0],[x0,y0+.75,CL],[x0,y0,CL]]);poly("#7d786e",[[x0,y0+.75,0],[x0+1.1,y0+.75,0],[x0+1.1,y0+.75,CL],[x0,y0+.75,CL]]);}
+   const crowd=[];for(let k=0;k<7;k++)for(let z=1;z<CL-1;z+=.9){if(r()<.25)continue;crowd.push([XS+k*1.1+.55,k*.75+.75,z+r()*.3,["#b3202a","#2f4a6b","#efe3c8","#3a5a2a","#1d1b26","#e9b949"][r()*6|0],r()]);}
+   const hype=g.call&&g.call.t<1.2;crowd.sort((a,b)=>a[2]-b[2]).forEach(([x,y,z,col,rr])=>{const[sx,sy,s]=P(x,y,z),hh=Math.max(2,s*.9),ww=Math.max(1.5,s*.45),j=hype&&rr<.5&&((frame>>3)+(rr*9|0))%2?Math.max(1,s*.15):0;
+     fR(col,sx-ww/2,sy-hh-j,ww,hh);fR("#f1c9a5",sx-ww*.35,sy-hh-ww*.7-j,ww*.7,ww*.7);});
+   // pared izquierda con cuadros, frontis con chapa
+   poly("#cfcfbb",[[0,0,0],[0,WH+1,0],[0,WH+1,CL+2],[0,0,CL+2]]);poly("#a9a996",[[0,0,CL+2],[0,WH+1,CL+2],[-.6,WH+1,CL+2],[-.6,0,CL+2]]);
+   for(let k=0;k<6;k++)poly(`rgba(0,0,0,${.04*(6-k)/6})`,[[0,0,k*5],[0,WH+1,k*5],[0,WH+1,k*5+5],[0,0,k*5+5]]);
+   poly("#d7d9c4",[[0,0,0],[XS,0,0],[XS,WH+1,0],[0,WH+1,0]]);
+   poly("#8c939a",[[0,0,0],[XS,0,0],[XS,FRT.chapa,0],[0,FRT.chapa,0]]);for(let y=.15;y<FRT.chapa;y+=.25)line("rgba(255,255,255,.25)",.03,[0,y,0],[XS,y,0]);
+   line("#f4f1e4",.12,[0,FRT.chapa,0],[XS,FRT.chapa,0]);poly("#b3202a",[[0,WH,0],[XS,WH,0],[XS,WH+.25,0],[0,WH+.25,0]]);line("#b3202a",.15,[CW,0,0],[CW,WH,0]);
+   poly("#b3202a",[[0,WH,0],[0,WH+.25,0],[0,WH+.25,CL+2],[0,WH,CL+2]]);
+   // suelo de la cancha con cuadros (líneas cada 4 m; falta y pasa en rojo)
+   poly("#3f6b52",[[0,0,0],[CW,0,0],[CW,0,CL+6],[0,0,CL+6]]);
+   for(let z=0;z<CL+6;z+=2)poly(z/2%2?"rgba(255,255,255,.025)":"rgba(0,0,0,.03)",[[0,0,z],[CW,0,z],[CW,0,z+2],[0,0,z+2]]);
+   for(let k=1;k<=7;k++){const z=k*4,red=z===FRT.falta||z===FRT.pasa||z===CL;line(red?"#d84a3a":"rgba(244,241,228,.7)",red?.1:.05,[0,0,z],[CW,0,z]);line(red?"#d84a3a":"rgba(40,40,40,.55)",.08,[0,0,z],[0,WH,z]);
+     if(g.st!=="elige"){const[sx,sy,s]=P(0,WH*.72,z-2);txt(String(k),sx+s*.4,sy,"#3d4a43",Math.max(5,Math.min(14,s*.9)),"left","none",8);}}
+   line("#d84a3a",.1,[CW,0,0],[CW,0,CL+6]);
+   // diana de apuntado
+   const mine=g.st==="juego"&&g.b.by===1||g.st==="saque"&&g.sv===0;
+   if((g.st==="juego"||g.st==="saque")&&!g.auto){const[ax,ay,as]=P(g.ax,0,g.az),rx=Math.max(3,as*.7),ry=Math.max(2,as*.7*(port?.6:.3)),out=g.ax>CW||g.az>CL||(g.st==="saque"&&(g.az<FRT.falta||g.az>FRT.pasa));
+     ctx.strokeStyle=out?"rgba(224,85,43,.9)":mine?"rgba(120,200,255,.95)":"rgba(120,200,255,.45)";ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(ax,ay,rx,ry,0,0,7);ctx.stroke();ctx.beginPath();ctx.ellipse(ax,ay,rx*.4,ry*.4,0,0,7);ctx.stroke();
+     if(g.aimT>0||mine)txt(out?"FUERA":"",ax,ay-ry-6,"#e0552b",5,"center",null,8);}
+   // marca del bote
+   const b=g.b;if(b&&b.lt>0){const[lx,ly,ls]=P(b.lx,0,b.lz);ctx.strokeStyle=`rgba(255,255,255,${b.lt})`;ctx.beginPath();ctx.ellipse(lx,ly,ls*.4,ls*.4*(port?.6:.3),0,0,7);ctx.stroke();}
+   // entidades por profundidad: sombras, pelotaris y pelota
+   const ents=[];if(g.P&&g.st!=="elige")g.P.forEach((p,i)=>ents.push({z:p.z,f:()=>{const[x,y,s]=P(p.x,0,p.z),z=Math.round(s*1.6),bob=p.run?Math.abs(Math.sin(g.t*14+i))*s*.12:0;
+     ctx.fillStyle="rgba(0,0,0,.3)";ctx.beginPath();ctx.ellipse(x,y,z*.35,Math.max(1.5,z*.1),0,0,7);ctx.fill();
+     ctx.save();ctx.translate(x,y-bob);if(p.sw>0)ctx.rotate(-Math.sin((.3-p.sw)/.3*Math.PI)*.5);ctx.drawImage(creImg(p.c,32,p.run?(frame>>2)&1:(frame>>4)&1),-z/2,-z,z,z);ctx.restore();
+     if(p.sw>0){ctx.strokeStyle=`rgba(255,255,255,${p.sw*2.5})`;ctx.lineWidth=Math.max(1,s*.12);ctx.beginPath();ctx.arc(x+s*.45,y-z*.55,s*.6,-2.2,.4);ctx.stroke();}
+     fR(i?"#b3202a":"#2f6fb0",x-z*.18,y-z-Math.max(3,s*.25),z*.36,Math.max(2,s*.15));}}));
+   if(b&&g.st!=="elige"&&g.st!=="fin")ents.push({z:b.z,f:()=>{const[sx,sy,s]=P(b.x,b.y,b.z),[hx,hy2]=P(b.x,0,b.z),rr=Math.max(2,s*.14);
+     ctx.fillStyle=`rgba(0,0,0,${.35-Math.min(.25,b.y*.03)})`;ctx.beginPath();ctx.ellipse(hx,hy2,rr*1.3,rr*.5,0,0,7);ctx.fill();
+     b.tr.forEach(([x,y,z],i)=>{const[tx,ty,ts]=P(x,y,z);ctx.fillStyle=`rgba(255,255,255,${i/b.tr.length*.35})`;ctx.beginPath();ctx.arc(tx,ty,Math.max(1,ts*.1),0,7);ctx.fill();});
+     ctx.fillStyle="#f6f3ea";ctx.beginPath();ctx.arc(sx,sy,rr,0,7);ctx.fill();ctx.fillStyle="#b9b3a2";ctx.beginPath();ctx.arc(sx+rr*.3,sy+rr*.3,rr*.5,0,7);ctx.fill();
+     // aro de tiempo: se cierra sobre la pelota en el instante ideal
+     const pl=g.P[0],pn=pl.plan;if(!g.auto&&g.st==="juego"&&b.by===1&&pn&&pn.ok&&!g.swung){const tl=pn.t-g.t;if(tl<.8&&tl>-.26){const k=Math.max(0,tl),R=rr+2+k*Math.max(26,s*4),gold=Math.abs(tl)<.045;
+       ctx.strokeStyle=gold?"#f5d142":tl<0?"rgba(224,85,43,.8)":"rgba(255,255,255,.85)";ctx.lineWidth=gold?2:1;ctx.beginPath();ctx.arc(sx,sy,R,0,7);ctx.stroke();}}
+     if(g.st==="saque"){const sp=g.P[g.sv];if(g.sv===0&&!g.auto){const{ph}=d.bote(g),tl=Math.abs(ph-.5)*.8,R=rr+2+tl*40;ctx.strokeStyle=tl<.045?"#f5d142":"rgba(255,255,255,.7)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(sx,sy,R,0,7);ctx.stroke();}}}});
+   ents.sort((a,b)=>a.z-b.z).forEach(e=>e.f());
+   // juicio del golpe
+   if(g.judge&&g.P){const p=g.P[g.judge.P||0],[x,y,s]=P(p.x,0,p.z);bigTxt(g.judge.s,clamp(x,40,W-40),y-s*1.9-8,g.judge.c,7,10);}
+   // marcador de frontón: azul (tú) y colorado (rival)
+   if(g.st!=="elige"&&g.score){const hy0=SAFE.t+4,x0=port?Math.max(W/2-70,(FERIA.sr||0)+4):W/2-70,bw=Math.min(140,W-SAFE.r-4-x0),hc=x0+bw/2;
+     fR("#1d1b26",x0,hy0,bw,24);fR("#2f6fb0",x0+2,hy0+2,bw/2-3,20);fR("#b3202a",hc+1,hy0+2,bw/2-3,20);
+     txt(String(g.score[0]),x0+bw*.25,hy0+17,"#fff",10,"center","none",13);txt(String(g.score[1]),x0+bw*.75,hy0+17,"#fff",10,"center","none",13);
+     txt("TÚ",x0+bw*.25-bw*.17,hy0+9,"#cfe3ff",4,"center","none",7);txt("RIVAL",x0+bw*.75+bw*.14,hy0+9,"#ffd0d0",4,"center","none",7);
+     if(g.st==="saque"||g.st==="juego")fR("#f5d142",g.sv===0?x0+4:x0+bw-8,hy0+19,4,4);
+     if(g.rally>2&&g.st==="juego")txt(`Peloteo ${g.rally}`,hc,hy0+32,"#efe3c8",5,"center",null,8);}
+   if(g.call){const c=g.call,a=Math.min(1,c.t*5);bigTxt(c.s,W/2,H*.36-(1-a)*10,c.w===0?"#7cc0ff":"#ff7a6a",14,20);txt(c.w===0?"Tanto para ti":"Tanto para el rival",W/2,H*.36+18,"#fff",6,"center",null,9);}
+   if(g.st==="saque"&&g.sv===0&&!g.auto)txt(TOUCH?"Elige dónde botar y toca en lo alto del bote":"Apunta con el ratón o flechas · clic o espacio en lo alto del bote",W/2,bot+(port?10:14),"#efe3c8",5,"center",null,8);
+   else if(g.st==="juego"&&g.b.by===1&&!g.auto)txt(g.late?"¡Llega tarde!":TOUCH?"Mantén para apuntar · suelta cuando el aro se cierre":"Golpea cuando el aro se cierre sobre la pelota",W/2,bot+(port?10:14),g.late?"#e0552b":"#efe3c8",5,"center",null,8);
+   if(port&&(g.st==="juego"||g.st==="saque"))fBtn("dar",W/2-50,H-SAFE.b-34,100,26,"¡DALE!",{col:"#e0552b",key:" "});
+   if(g.st==="elige"){const pw=Math.min(W-20,port?W-20:420),px=W/2-pw/2;fR("rgba(13,10,18,.88)",px,H*.08,pw,H*(port?.8:.82));txt("FRONTÓN A MANO",W/2,H*.08+16,"#f5c030",10,"center",null,14);
+     txt(`Tu pelotari: ${cName(g.me.c)} · Vel ${g.me.vel} · Tiro ${g.me.tir}`,W/2,H*.08+30,"#efe3c8",5,"center","none",8);
+     g.R.forEach((R,i)=>{const y=H*.08+42+i*(port?H*.2:H*.19),bh=port?H*.17:H*.16;fBtn("riv"+i,px+10,y,pw-20,bh,"",{col:["#4f8f3a","#c9891a","#b3202a"][i],key:String(i+1)});
+       const sz=Math.min(30,bh-6);ctx.drawImage(creImg(R.pel.c,32,(frame>>4)&1),px+16,y+bh/2-sz/2,sz,sz);const tx2=px+24+sz;
+       txt(`${R.nm}: ${cName(R.pel.c)} de ${R.name}`,tx2,y+bh*.38,"#fff",7,"left",null,10);txt(`Nv ${R.lv} · Vel ${R.pel.vel} · Tiro ${R.pel.tir} · ${R.pr}${i===2?(port?" + él":" fichas + su pelotari"):" fichas"}`,tx2,y+bh*.72,"#1d1b26",5,"left","none",8);});
+     txt(feriaSt().free>0?"Hoy el primero va gratis":`Entrada: ${FRT.cost} fichas`,W/2,H*.08+H*(port?.8:.82)-8,"#9a8f78",5,"center","none",8);}
+   if(g.st==="fin"){const w=g.won;fR("rgba(13,10,18,.8)",W/2-110,H*.3,220,70);bigTxt(w?"¡TXAPELDUN!":"Has perdido",W/2,H*.3+22,w?"#f5d142":"#e0552b",12,16);
+     txt(`${g.score[0]} - ${g.score[1]} · peloteo más largo: ${g.longest}`,W/2,H*.3+42,"#efe3c8",6,"center",null,9);if(w)txt(`+${g.riv.pr} fichas`,W/2,H*.3+56,"#f5d142",6,"center",null,9);
+     fBtn("otra",W/2-75,H-SAFE.b-(port?40:34),150,26,"OTRO (ELIGE RIVAL)",{col:"#2f8a3a",key:"Enter"});}}};
+FERIA.order.push("fronton");
 $("bSnd").textContent=AU.on?"♪":"✕♪";
 window.G={get E(){return E;},get ROAM(){return ROAM;},get MG2(){return MG2;},get W(){return W;},get H(){return H;},get F(){return{FX0,FX1,FY0,FY1,GCX,MIDY};},get S(){return S;},get M(){return M;},get scene(){return scene;},set HALF(v){HALF=v;},P,DATA,newGame,startMatchFlow,zoneTeam,buildTeam,newCre,addCre,say,testAct,startRecruit};
 // Los sprites PixelLab se decodifican antes del primer dibujo (formImg, human e itemImg los usan de forma síncrona y cachean).
