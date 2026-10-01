@@ -114,6 +114,12 @@ Probado con un jugador automático que usa el joystick y los botones táctiles (
 - **Descanso, prealineación y resultado en horizontal:** las criaturas van en dos columnas y el botón (¡Segunda parte!, ¡Al campo!, Continuar) queda fijo abajo. Ya no hay que desplazar la pantalla para seguir. En vertical se ven igual que antes.
 - **Resultado:** muestra también los tiros de cada equipo.
 
+## Error corregido: el juego se congelaba tras ganar a Retuerto
+
+- **Causa:** la animación de la insignia usaba las rayas de velocidad de la pantalla de tiro, y estas leían el reloj del tiro (`CS.t`). Fuera de un tiro `CS` está vacío, así que el dibujo fallaba en cada fotograma. La animación nunca terminaba y el juego se quedaba en negro. Pasaba con la primera insignia (Retuerto) y habría pasado con todas.
+- **Arreglo:** las rayas usan el reloj normal cuando no hay tiro. Además, si una animación de pantalla completa falla al dibujar, el error se registra y la animación termina igual, así que el juego ya no se queda colgado.
+- **Probado:** ganando los 7 partidos oficiales seguidos, con los 3 del Capataz, el sabotaje del bar, el acto 3 y el final. Sin errores; el juego vuelve siempre al mapa.
+
 ## Detectado pero sin cambiar: decides tú
 
 - **Balance:** simulé 200 partidos IA contra IA y salen 3,35 goles y 15,6 tiros por partido. El comentario de `BALANCE` dice que está calibrado en unos 2,6 goles y 13 tiros, con un objetivo de 2-3 goles. Para volver a ese rango, se podría bajar `shot.base` de 28 a unos 24 y volver a simular (Modo prueba → "Simular 50 partidos").

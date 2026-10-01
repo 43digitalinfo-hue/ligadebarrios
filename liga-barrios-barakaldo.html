@@ -1125,7 +1125,8 @@ function answer(i){const q=DQ;DQ=null;$("dlg").className="hide";sfx("menu");q.cb
 function advance(){if(!DQ||DQ.ask)return;sfx("menu");if(++DQ.i<DQ.lines.length)return showDlg();const cb=DQ.cb;DQ=null;$("dlg").className="hide";cb&&cb();}
 // ---- Efectos a pantalla completa ----
 function playFx(dur,draw,cb){if(scene!=="fx")prevScene=scene;FX={t:0,dur,draw,cb};scene="fx";}
-function fxStep(dt){FX.t+=dt;FX.draw(Math.min(1,FX.t/FX.dur),FX.t);if(FX.t>=FX.dur){const f=FX;FX=null;scene=prevScene;f.cb&&f.cb();}}
+// DECISIÓN: un fallo al dibujar una animación no puede dejar el juego congelado en ella; se registra y la animación sigue su curso.
+function fxStep(dt){FX.t+=dt;try{FX.draw(Math.min(1,FX.t/FX.dur),FX.t);}catch(e){if(!FX.err){FX.err=1;console.error(e);}}if(FX.t>=FX.dur){const f=FX;FX=null;scene=prevScene;f.cb&&f.cb();}}
 function evoAnim(c,from,cb,to){
   to=to??c.stage;const s=SPD(c),old=formImg(s.f[to-1],s.t,c.rar==="d",32),nw=formImg(s.f[to],s.t,c.rar==="d",32);sfx("evo");
   playFx(2.6,(p,t)=>{ctx.fillStyle="#1d1b26";ctx.fillRect(0,0,W,H);const fq=4+p*30,show=p>.85||Math.sin(t*fq)>0;
@@ -2533,7 +2534,8 @@ function csUpdate(dt){
 }
 function csEnd2(d,r){const SH=CS.SH;[SH.tT,SH.kT].forEach(t=>{if(t&&t.combo){S.combos=S.combos||{};if(!S.combos[t.n]){S.combos[t.n]=1;setTimeout(()=>{if(M&&!M.sim){M.msg={t:3,s:"¡Nueva técnica combinada en el álbum!"};SFX.evo();}},100);}}});const shown=CS.shown;S.techSeen=S.techSeen||{};shown.forEach(n=>S.techSeen[n]=1);CS=null;if(CSZ){CSZ=false;resize();}hidePanel();scene="match";mpadShow(true);d(r);}
 function ballPath(k,to){const e=ease(clamp(k,0,1)),x1=to?to[0]:CS.tx,y1=to?to[1]:CS.ty;return[lerp(CS.x0,x1,e),lerp(CS.y0,y1,e),Math.sin(e*Math.PI)*14];}
-function speedLines(col,cx,cy){ctx.fillStyle=col;for(let i=0;i<28;i++){const a=i*.224+((i*37)%7)*.1,r=((CS.t*260+i*53)%(Math.max(W,H)));for(let j=0;j<12;j++)ctx.fillRect(cx+Math.cos(a)*(r+j*2),cy+Math.sin(a)*(r+j*2),1,1);}}
+// Ojo: también se usa fuera del tiro (insignia), donde CS es null; entonces anima con el reloj.
+function speedLines(col,cx,cy){const T=CS?CS.t:performance.now()/1000;ctx.fillStyle=col;for(let i=0;i<28;i++){const a=i*.224+((i*37)%7)*.1,r=((T*260+i*53)%(Math.max(W,H)));for(let j=0;j<12;j++)ctx.fillRect(cx+Math.cos(a)*(r+j*2),cy+Math.sin(a)*(r+j*2),1,1);}}
 // ---- Animaciones propias de cada supertécnica ----
 // Parámetros: k (0-1), L (layout). Pueden cambiar CS.ball, CS.hideS y lanzar partículas. P = punto de la defensa.
 const TFX={
