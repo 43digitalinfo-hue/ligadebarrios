@@ -59,6 +59,8 @@ button.on{background:var(--rust)}
 #ov.clear{background:linear-gradient(#1d1b26ee,#1d1b2699 55%,transparent 75%)}
 #ov>*{max-width:520px;margin-left:auto;margin-right:auto}
 #ov h1{font-size:44px;line-height:1;margin:30px 0 4px;color:var(--gold);text-shadow:3px 3px 0 var(--rust),6px 6px 0 var(--ink),-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink)}
+#ov .pity{position:relative;height:16px;background:#1d1b26;border:1px solid #46415a;border-radius:3px;margin:6px 0 10px;overflow:hidden}#ov .pity span{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#b58ae0,#f5c030)}#ov .pity small{position:relative;display:block;text-align:center;font-size:11px;line-height:16px;color:#fff;text-shadow:1px 1px 0 #1d1b26}
+#ov .fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 10px}#ov .fcard{display:grid;grid-template-columns:40px 1fr;grid-template-rows:auto auto auto;gap:0 8px;text-align:left;padding:8px;align-items:start}#ov .fcard img{grid-row:1/4;width:40px;height:40px;image-rendering:pixelated}#ov .fcard b{color:var(--gold)}#ov .fcard small{font-size:11px;opacity:.85;line-height:1.25}#ov .fcard i{font-size:11px;color:#7cc050;font-style:normal}#ov button.feriab{border-color:#f5c030}
 #ov h2{font-size:24px;margin:4px 0 6px;color:var(--gold);text-shadow:2px 2px 0 var(--ink)}#ov h3{font-size:17px;margin:10px 0 4px;color:#9fc6d6;text-shadow:1px 1px 0 var(--ink)}
 #ov .sub{font-size:18px;color:#9fc6d6;margin:0 0 22px}#ov .warn{color:#e0552b}#ov .tiny{font-size:13px;color:#b9b2a2;margin-top:14px}
 #ov .title{display:flex;flex-direction:column;gap:12px}#ov .big{font-size:20px;padding:10px}
@@ -1232,7 +1234,7 @@ function useItem(id){
 // ---- Bar: tienda y txoko ----
 function barMenu(z){
   scene="menu";
-  OV(()=>`<h2>Bar de ${zName(z)}</h2><p class="info">${S.fichas} fichas</p><div class="col"><button onclick="${Hk(()=>shopScreen(z))}">Tienda</button><button onclick="${Hk(()=>txokoScreen(z))}">Txoko (almacén)</button><button onclick="${Hk(()=>{const ok=save();say([ok?"Partida guardada.":"No se ha podido guardar en este navegador."]);})}">Guardar</button><button onclick="${Hk(closeMenu)}">Salir</button></div>`);
+  OV(()=>`<h2>Bar de ${zName(z)}</h2><p class="info">${S.fichas} fichas</p><div class="col"><button onclick="${Hk(()=>shopScreen(z))}">Tienda</button><button onclick="${Hk(()=>txokoScreen(z))}">Txoko (almacén)</button><button class="feriab" onclick="${Hk(()=>feriaOpen(z))}">Feria del bar</button><button onclick="${Hk(()=>{const ok=save();say([ok?"Partida guardada.":"No se ha podido guardar en este navegador."]);})}">Guardar</button><button onclick="${Hk(closeMenu)}">Salir</button></div>`);
 }
 function shopScreen(z){
   OV(()=>`<h2>Tienda</h2><p class="info">${S.fichas} fichas</p>${DATA.shop.map(it=>`<div class="item"><b>${it.n}</b> · ${it.p} fichas (tienes ${S.items[it.id]||0})<br><small>${it.d}</small><br><button ${S.fichas>=it.p?"":"disabled"} onclick="${Hk(()=>{S.fichas-=it.p;S.items[it.id]=(S.items[it.id]||0)+1;sfx("bien");shopScreen(z);})}">Comprar</button></div>`).join("")}<div class="row"><button onclick="${Hk(()=>barMenu(z))}">Volver</button></div>`);
@@ -3276,12 +3278,12 @@ $("bSnd").addEventListener("click",()=>{auInit();toggleSound();});
 $("bPause").addEventListener("click",togglePause);
 $("dlg").addEventListener("pointerdown",e=>{if(DQ&&!DQ.ask){e.preventDefault();advance();}});
 let cvDown=false;
-cv.addEventListener("pointerdown",e=>{e.preventDefault();auInit();cvDown=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}if(scene==="match")mDown(e);else if(scene==="mini")miniDown(e);else if(scene==="shot"){if(CS&&CS.aiming){const[sx,sy]=mPos(e),cd=(CS.cards||[]).find(c=>sx>=c.x&&sx<c.x+c.w&&sy>=c.y&&sy<c.y+c.h);if(cd)csPickTech(cd.t);else{const z=csZone(sx,sy);if(z){CS.aiming.h=z;csAimPick(z);}}}else csSkip();}else if(scene==="mg")mgInput("dn",e);});
+cv.addEventListener("pointerdown",e=>{e.preventDefault();auInit();cvDown=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}if(scene==="match")mDown(e);else if(scene==="mini")miniDown(e);else if(scene==="shot"){if(CS&&CS.aiming){const[sx,sy]=mPos(e),cd=(CS.cards||[]).find(c=>sx>=c.x&&sx<c.x+c.w&&sy>=c.y&&sy<c.y+c.h);if(cd)csPickTech(cd.t);else{const z=csZone(sx,sy);if(z){CS.aiming.h=z;csAimPick(z);}}}else csSkip();}else if(scene==="mg")mgInput("dn",e);else if(scene==="feria")feriaIn("dn",e);});
 // Ratón sin pulsar: en el partido el jugador sigue al cursor; en la pantalla de tiro marca la zona.
-cv.addEventListener("pointermove",e=>{if(e.pointerType!=="mouse")return;const p=mPos(e);if(scene==="match"&&M)M.mouse=p;else if(scene==="shot")csAimHover(p[0],p[1]);});
+cv.addEventListener("pointermove",e=>{if(e.pointerType!=="mouse")return;const p=mPos(e);if(scene==="match"&&M)M.mouse=p;else if(scene==="shot")csAimHover(p[0],p[1]);else if(scene==="feria")feriaIn("hv",e);});
 cv.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse"&&M)M.mouse=null;});
-cv.addEventListener("pointermove",e=>{if(!cvDown&&!(scene==="match"&&M&&M.joy))return;if(scene==="match")mMove(e);else if(scene==="mini")miniMove(e);else if(scene==="mg")mgInput("mv",e);});
-cv.addEventListener("pointerup",e=>{cvDown=false;if(scene==="match")mUp(e);else if(scene==="mg")mgInput("upp",e);});
+cv.addEventListener("pointermove",e=>{if(!cvDown&&!(scene==="match"&&M&&M.joy))return;if(scene==="match")mMove(e);else if(scene==="mini")miniMove(e);else if(scene==="mg")mgInput("mv",e);else if(scene==="feria")feriaIn("mv",e);});
+cv.addEventListener("pointerup",e=>{cvDown=false;if(scene==="match")mUp(e);else if(scene==="mg")mgInput("upp",e);else if(scene==="feria")feriaIn("up",e);});
 cv.addEventListener("pointercancel",()=>{cvDown=false;if(M){M.drag=null;M.joy=null;}});
 // Botones táctiles estilo Brawl Stars: tocar = actuar hacia donde apunta el joystick; arrastrar desde el botón = apuntar a mano (se suelta y sale).
 [["mP","pass"],["mS","shoot"],["mX","super"]].forEach(([id,a])=>{const b=$(id);let st=null;
@@ -3295,11 +3297,12 @@ const KM={ArrowDown:0,ArrowLeft:1,ArrowRight:2,ArrowUp:3,s:0,a:1,d:2,w:3,S:0,A:1
 const typing=e=>!!(e.target&&e.target.closest&&e.target.closest("input,select,textarea"));
 const uiBtn=e=>!!(e.target&&e.target.closest&&e.target.closest("#ov button,#panel button,#dlg button"));
 addEventListener("keydown",e=>{if(typing(e))return;auInit();if(scene==="match"&&M&&!uiBtn(e)&&matchKey(e)){e.preventDefault();return;}
+  if(scene==="feria"&&FG&&!DQ&&!uiBtn(e)){if(!e.repeat)feriaKey(e.key.length===1?e.key.toLowerCase():e.key);e.preventDefault();return;}
   if(scene==="shot"&&CS&&CS.aiming&&!uiBtn(e)){if(!e.repeat)aimKey(e.key.length===1?e.key.toLowerCase():e.key);e.preventDefault();return;}if(e.key in KM){const d=KM[e.key];if(!held.includes(d))held.push(d);e.preventDefault();}
   else if(e.key==="z"||e.key==="Enter"||e.key===" "){if(e.key!=="z"&&uiBtn(e))return;if(!e.repeat)pressA();e.preventDefault();}
   else if(e.key==="x"||e.key==="Shift"){if(!e.repeat){bT=performance.now();P.run=true;}}
   else if(e.key==="m"||e.key==="Escape"){if(scene==="world"&&S&&!DQ)mainMenu();else if(scene==="menu"&&S&&!M)menuBack();}});
-addEventListener("keyup",e=>{if(e.key in KM)held=held.filter(x=>x!==KM[e.key]);if(typing(e))return;if(e.key==="x"||e.key==="Shift"){if(performance.now()-bT<220)pressB();P.run=false;}});
+addEventListener("keyup",e=>{if(scene==="feria"&&FG)feriaKey(e.key.length===1?e.key.toLowerCase():e.key,true);if(e.key in KM)held=held.filter(x=>x!==KM[e.key]);if(typing(e))return;if(e.key==="x"||e.key==="Shift"){if(performance.now()-bT<220)pressB();P.run=false;}});
 document.addEventListener("gesturestart",e=>e.preventDefault());
 document.addEventListener("dblclick",e=>e.preventDefault());
 function resize(){
@@ -3331,6 +3334,7 @@ function loop(ts){
     else if(scene==="mg"){mgUpdate(dt);if(MG2)mgDraw();}
     else if(scene==="enc"){encUpdate(dt);drawEnc();}
     else if(scene==="mini"){miniUpdate(dt);if(MG)miniDraw();}
+    else if(scene==="feria"){feriaUpdate(dt);if(FG)feriaDraw();}
     else if(scene==="fx"&&FX)fxStep(dt);
     else if(scene==="title"){drawTitleBg();}
     else if(S&&MAP.length)drawWorld();
@@ -3342,6 +3346,252 @@ function drawTitleBg(){
   if(!PITCH||PITCH.w0!==W||PITCH.h0!==H||PITCH.sk!==skyKey())layoutField();ctx.fillStyle="#1f2a1c";ctx.fillRect(0,0,W,H);ctx.save();ctx.scale(ZM,ZM);ctx.drawImage(PITCH,0,0);drawBoards(performance.now()/1000,ZM);ctx.restore();postFx();drawFloods();ctx.fillStyle="rgba(29,27,38,.35)";ctx.fillRect(0,0,W,H);
   ["fumon","txipiron","carbonilla"].forEach((sp,i)=>{const s=DATA.sp[sp],x=Math.round(W/2-100+i*68),y=Math.round(H*.72+Math.sin(frame/30+i)*4);pxEll(x+32,y+62,22,4,"rgba(0,0,0,.3)");ctx.drawImage(formImg(s.f[0],s.t,false,32,(frame>>5)&1),x,y,64,64);});
 }
+// ================= FERIA DEL BAR: juegos de azar con estrategia y habilidad =================
+// Se entra desde el menú del bar. Se juega con fichas. Para no romper la progresión: tope diario de fichas apostadas,
+// una partida gratis al día y una criatura rara asegurada cuando llevas FERIA.pity fichas apostadas sin que te toque una. Las probabilidades se ven en el menú.
+// Cada juego es {n, ic, d, min, odds, init(g), up(g,dt), dr(g), btn(g,id), dn/mv/up/hv(g,x,y), key(g,k), keyup(g,k)}.
+const FERIA={cap:400,pity:600,G:{},order:[],z:0};
+function feriaSt(){const day=new Date().toDateString(),F=S.feria=S.feria||{day:"",bet:0,free:0,pity:0,best:{},won:0};if(F.day!==day){F.day=day;F.bet=0;F.free=1;}return F;}
+const feriaLeft=()=>Math.max(0,FERIA.cap-feriaSt().bet);
+// Cobra la entrada. free=true gasta la partida gratis del día si queda. Devuelve false si no hay fichas o se pasa del tope.
+function feriaPay(n,free){const F=feriaSt();if(free&&F.free>0){F.free--;F.pity+=n;return true;}if(S.fichas<n||F.bet+n>FERIA.cap)return false;S.fichas-=n;F.bet+=n;F.pity+=n;return true;}
+const feriaWhyNot=n=>S.fichas<n?"No te llegan las fichas":"Tope diario de la feria alcanzado";
+function feriaGain(n){if(n>0){S.fichas+=n;feriaSt().won+=n;}}
+// Especies por rareza (sin exclusivas ni la legendaria: esas siguen saliendo solo en el barrio)
+function feriaPool(tier){return Object.keys(DATA.sp).filter(k=>{const r=DATA.sp[k].r;return tier==="r"?r==="rara":r==="común"||r==="poco común";});}
+// Criatura de premio. tier "n" común, "r" especie rara, "d" dorada. Se une al equipo o al txoko. Devuelve el texto del premio.
+function feriaCre(tier,sp){const pool=feriaPool(tier==="n"?"n":"r");sp=sp||pick(pool);const c=newCre(sp,clamp(avgLvl()-1,5,45),tier==="d"?"d":tier==="r"&&rnd()<.3?"r":"n");if(tier!=="n")feriaSt().pity=0;
+  const where=addCre(c);save();return`¡${cName(c)}${rarTxt(c)} (Nv ${c.lvl}) se une a ti! Va al ${where}.`;}
+// Premio de fidelidad: con FERIA.pity fichas apostadas sin rara, al salir del juego te llevas una.
+function feriaPity(){const F=feriaSt();if(F.pity>=FERIA.pity){F.pity=0;return feriaCre("r");}return null;}
+let FG=null;
+function feriaOpen(z){if(z!=null)FERIA.z=z;scene="menu";const F=feriaSt(),pp=Math.round(F.pity/FERIA.pity*100);
+  OV(()=>`<h2>Feria del bar</h2><p class="info">${S.fichas} fichas · hoy puedes apostar ${feriaLeft()} más${F.free?" · <b style=\"color:#7cc050\">1 partida gratis</b>":""}</p>
+  <div class="pity"><span style="width:${pp}%"></span><small>Rara asegurada: ${Math.min(F.pity,FERIA.pity)}/${FERIA.pity} fichas apostadas</small></div>
+  <div class="fgrid">${FERIA.order.map(id=>{const d=FERIA.G[id];return`<button class="fcard" onclick="${Hk(()=>feriaPlay(id))}"><img src="${feriaIcon(id)}"><b>${d.n}</b><small>${d.d}</small><i>${d.min?"desde "+d.min+" fichas":"entrada libre"}</i></button>`;}).join("")}</div>
+  <div class="row"><button onclick="${Hk(feriaOdds)}">Probabilidades</button><button onclick="${Hk(()=>barMenu(FERIA.z))}">Volver</button></div>`);}
+function feriaOdds(){OV(()=>`<h2>Probabilidades</h2>${FERIA.order.map(id=>`<h3>${FERIA.G[id].n}</h3><ul>${FERIA.G[id].odds.map(o=>`<li>${o}</li>`).join("")}</ul>`).join("")}
+  <p class="tiny">Tope diario: ${FERIA.cap} fichas apostadas. Una partida gratis al día. Criatura rara asegurada al apostar ${FERIA.pity} fichas sin que te toque una. Solo fichas del juego.</p><div class="row"><button onclick="${Hk(()=>feriaOpen())}">Volver</button></div>`);}
+const FIC={};function feriaIcon(id){if(FIC[id])return FIC[id];const c=mkC(32,32),g=c.getContext("2d");FERIA.G[id].ic(g);return FIC[id]=c.toDataURL();}
+function feriaPlay(id){const def=FERIA.G[id];ovHide();hidePanel();scene="feria";showPad(false);music("match");for(const p of PP)p.l=0;FG={id,def,g:{},t:0,btns:[],hov:null,msg:null};def.init(FG.g);}
+function feriaExit(lines){const f=()=>{FG=null;hidePanel();feriaOpen();};save();const p=feriaPity();const L=[...(lines||[]),...(p?["¡Premio de fidelidad de la feria!",p]:[])];if(L.length)say(L,f);else f();}
+function feriaUpdate(dt){if(!FG)return;partsStep(dt);FG.t+=dt;if(FG.prsT>0)FG.prsT-=dt;if(FG.msg&&(FG.msg.t-=dt)<=0)FG.msg=null;FG.def.up(FG.g,dt);}
+function feriaDraw(){FG.btns=[];ctx.setTransform(1,0,0,1,0,0);FG.def.dr(FG.g);partsDraw();
+  if(FG.msg){const m=FG.msg,a=Math.min(1,m.t*3);ctx.globalAlpha=a;const w=Math.min(W-20,tw(m.s,9,14)+24);ctx.fillStyle="rgba(29,27,38,.9)";ctx.fillRect(W/2-w/2,H*.42-12,w,20);ctx.fillStyle=m.c||"#f5d142";ctx.fillRect(W/2-w/2,H*.42-12,w,1);txt(m.s,W/2,H*.42+2,m.c||"#f5d142",9,"center",null,14);ctx.globalAlpha=1;}
+  // Salir (arriba a la izquierda)
+  const sb=$("bSnd").getBoundingClientRect(),cr=cv.getBoundingClientRect(),sx=Math.max(SAFE.l+4,(sb.right-cr.left)/cr.width*W+4);fBtn("salir",sx,SAFE.t+4,34,14,"Salir",{col:"#46415a",fg:"#efe3c8",key:"Escape"});}
+const fMsg=(s,c,t)=>{if(FG)FG.msg={s,c,t:t||1.6};};
+// Botón dibujado en el lienzo. o: col, fg, key (tecla), off (desactivado), lit (parpadea), sz (tamaño de letra)
+function fBtn(id,x,y,w,h,label,o={}){x=Math.round(x);y=Math.round(y);w=Math.round(w);h=Math.round(h);FG.btns.push({id,x,y,w,h,key:o.key,off:o.off});
+  const pr=FG.prs===id&&FG.prsT>0,hv=FG.hov===id&&!o.off,col=o.off?"#4a4658":o.col||"#e9b949",lit=o.lit&&(frame>>3)%2;
+  ctx.fillStyle="#1d1b26";ctx.fillRect(x-1,y-1,w+2,h+3);ctx.fillStyle=sh(col,.6);ctx.fillRect(x,y+(pr?1:0),w,h+(pr?0:1));ctx.fillStyle=lit?sh(col,1.3):hv?sh(col,1.12):col;ctx.fillRect(x,y+(pr?1:0),w,h-1);
+  ctx.fillStyle="rgba(255,255,255,.35)";ctx.fillRect(x+1,y+(pr?2:1),w-2,1);if(o.icon)o.icon(x,y+(pr?1:0),w,h);
+  if(label)txt(label,x+w/2,y+h/2+(o.sz||7)*.38+(pr?1:0),o.off?"#8a8599":o.fg||"#1d1b26",o.sz||7,"center","none",10);}
+function fHit(x,y){return FG.btns.slice().reverse().find(b=>x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h);}
+function feriaIn(type,e){if(!FG)return;const[x,y]=mPos(e);
+  if(type==="dn"){const b=fHit(x,y);if(b){if(b.off){tone(150,.08,"square",.04);return;}FG.prs=b.id;FG.prsT=.12;tone(520,.03,"square",.04);if(b.id==="salir"){if(!FG.def.canExit||FG.def.canExit(FG.g))feriaExit(FG.def.exitLines?FG.def.exitLines(FG.g):null);else fMsg("Termina la jugada primero","#e0552b");return;}FG.def.btn&&FG.def.btn(FG.g,b.id);return;}}
+  if(type==="hv"){const b=fHit(x,y);FG.hov=b?b.id:null;}
+  const f=FG.def[type];f&&f(FG.g,x,y,e);}
+function feriaKey(k,up){if(!FG)return;if(up){FG.def.keyup&&FG.def.keyup(FG.g,k);return;}
+  const b=FG.btns.find(b=>b.key&&(Array.isArray(b.key)?b.key.includes(k):b.key===k));if(b){if(b.off)return;FG.prs=b.id;FG.prsT=.12;if(b.id==="salir"){if(!FG.def.canExit||FG.def.canExit(FG.g))feriaExit(FG.def.exitLines?FG.def.exitLines(FG.g):null);return;}FG.def.btn&&FG.def.btn(FG.g,b.id);return;}
+  FG.def.key&&FG.def.key(FG.g,k);}
+// ---- Utilidades de dibujo para los juegos de la feria ----
+const fR=(c,x,y,w,h)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));};
+// Fondo del bar (madera, barra, botellas, rótulo de neón) cacheado por tamaño
+let FBAR=null;
+function feriaBarBg(){const k=W+"x"+H;if(FBAR&&FBAR.k===k)return FBAR.c;const c=mkC(W,H),g=c.getContext("2d"),R=(col,x,y,w,h)=>{g.fillStyle=col;g.fillRect(x|0,y|0,Math.ceil(w),Math.ceil(h));},r=srand(5);
+  R("#3b2418",0,0,W,H);for(let x=0;x<W;x+=14){R(r()<.5?"#452a1c":"#402719",x,0,13,H*.62);R("#2a190f",x+13,0,1,H*.62);for(let i=0;i<6;i++)R("rgba(0,0,0,.12)",x+2+r()*9,r()*H*.6,1,6+r()*14);}
+  R("#1f130c",0,H*.2,W,3);// balda con botellas
+  for(let x=6;x<W-6;x+=9+(r()*5|0)){const bh=12+r()*9,col=["#2f6b3a","#6b2a1f","#c9a34a","#2a4a6b","#d8d0b8","#4a2a5a"][r()*6|0];R(col,x,H*.2-bh,5,bh);R(col,x+1.5,H*.2-bh-4,2,4);R("rgba(255,255,255,.35)",x+1,H*.2-bh+2,1,bh-4);if(r()<.4)R("#efe3c8",x,H*.2-bh*.6,5,4);}
+  R("#1f130c",0,H*.36,W,3);for(let x=10;x<W-10;x+=22){R("#b9c2c6",x,H*.36-12,8,12);R("#e9b949",x+1,H*.36-9,6,8);R("#fff",x+1,H*.36-10,6,2);}
+  // barra
+  const by=H*.62;R("#5a3620",0,by,W,H-by);R("#7a4a2a",0,by,W,4);R("#a0683a",0,by,W,1);for(let x=0;x<W;x+=40)R("#4a2c18",x,by+4,2,H-by);R("#2a190f",0,H-6,W,6);
+  // suelo de baldosas (se ve por debajo de la barra)
+  const t=g.createRadialGradient(W/2,H*.3,10,W/2,H*.4,Math.max(W,H)*.8);t.addColorStop(0,"rgba(255,190,110,.18)");t.addColorStop(1,"rgba(0,0,0,.45)");g.fillStyle=t;g.fillRect(0,0,W,H);
+  FBAR={k,c};return c;}
+function feriaNeon(s,x,y,col,size){const on=(frame%240)>6||(frame%240)<3;ctx.save();ctx.globalAlpha=on?1:.35;txt(s,x,y,col,size,"center",sh(col,.5),12);ctx.restore();}
+// Mesa de fieltro verde con borde de madera (para cartas y dados)
+function feltTable(x,y,w,h){fR("#3a2414",x-6,y-6,w+12,h+12);fR("#5a3620",x-5,y-5,w+10,h+10);fR("#7a4a2a",x-5,y-5,w+10,1);const g=ctx.createRadialGradient(x+w/2,y+h/2,10,x+w/2,y+h/2,Math.max(w,h)*.7);g.addColorStop(0,"#2f7a44");g.addColorStop(1,"#17482a");ctx.fillStyle=g;ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(0,0,0,.06)";for(let i=0;i<w*h/40;i++){const u=(i*9301+49297)%233280/233280,v=(i*49297+9301)%233280/233280;ctx.fillRect(x+u*w|0,y+v*h|0,1,1);}}
+// ---- Baraja española (40 cartas: 1-7, sota 10, caballo 11, rey 12; oros, copas, espadas, bastos) ----
+// La "pinta" del borde dice el palo como en la baraja de verdad: oros sin cortes, copas 1, espadas 2, bastos 3.
+const PALOS=["oros","copas","espadas","bastos"],PALC=["#d9a520","#c0392b","#2f6fb0","#4f8f3a"],RANKS=[1,2,3,4,5,6,7,10,11,12];
+const CARDC={};
+function suitIcon(g,s,x,y,z){const R=(c,a,b,w,h)=>{g.fillStyle=c;g.fillRect(Math.round(x+a*z),Math.round(y+b*z),Math.max(1,Math.round(w*z)),Math.max(1,Math.round(h*z)));};
+  if(s===0){R("#8a5a10",1,0,4,6);R("#8a5a10",0,1,6,4);R("#f5c030",1,1,4,4);R("#fff0a0",2,1,1,1);R("#c9891a",2,2,2,2);}
+  else if(s===1){R("#7a1f18",0,0,6,3);R("#c0392b",1,0,4,2);R("#e0b040",0,0,6,1);R("#7a1f18",2,3,2,2);R("#c0392b",1,5,4,1);}
+  else if(s===2){R("#9fb4c8",3,0,1,5);R("#dfe8f0",2,0,1,5);R("#e0b040",1,5,4,1);R("#2f6fb0",2,6,2,1);}
+  else{R("#6b4423",2,0,2,7);R("#4f8f3a",1,0,4,2);R("#8a5a30",1,3,1,1);R("#8a5a30",4,4,1,1);}}
+// Posiciones de los símbolos del palo para las cartas 1-7 (en fracciones de la zona central)
+const PIPS={1:[[.5,.5]],2:[[.5,.2],[.5,.8]],3:[[.5,.15],[.5,.5],[.5,.85]],4:[[.28,.2],[.72,.2],[.28,.8],[.72,.8]],5:[[.28,.2],[.72,.2],[.5,.5],[.28,.8],[.72,.8]],6:[[.28,.15],[.72,.15],[.28,.5],[.72,.5],[.28,.85],[.72,.85]],7:[[.28,.12],[.72,.12],[.5,.32],[.28,.55],[.72,.55],[.28,.85],[.72,.85]]};
+function spCard(rank,suit,w,h){const k=rank+"_"+suit+"_"+w+"x"+h;if(CARDC[k])return CARDC[k];const c=mkC(w,h),g=c.getContext("2d"),R=(col,x,y,ww,hh)=>{g.fillStyle=col;g.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(ww)),Math.max(1,Math.round(hh)));};
+  R("#1d1b26",1,0,w-2,h);R("#1d1b26",0,1,w,h-2);R("#fbf6ea",1,1,w-2,h-2);R("#e9e0cc",1,h-2,w-2,1);
+  // pinta del borde
+  const col=PALC[suit],cuts=suit;R(col,2,2,w-4,1);R(col,2,h-3,w-4,1);for(let i=1;i<=cuts;i++){R("#fbf6ea",2+Math.round((w-4)*i/(cuts+1)),2,2,1);R("#fbf6ea",2+Math.round((w-4)*i/(cuts+1)),h-3,2,1);}
+  const z=Math.max(1,Math.floor(w/16)),fs=Math.max(6,Math.round(h*.2));g.fillStyle=col;g.font=`bold ${fs}px Georgia,serif`;g.textAlign="left";g.textBaseline="top";g.fillText(String(rank),3,3);
+  g.save();g.translate(w,h);g.rotate(Math.PI);g.fillText(String(rank),3,3);g.restore();
+  const bx=3,by=4+fs*.6,bw=w-6,bh=h-8-fs*1.2;
+  if(rank<=7){const ps=PIPS[rank],zz=rank===1?z*2:z;ps.forEach(([u,v])=>suitIcon(g,suit,bx+u*bw-3*zz,by+v*bh-3.5*zz,zz));}
+  else{// figura: sota (paje), caballo (jinete), rey (corona y barba)
+    const cx=w/2,top=by,fh=bh,S=(c,a,b,ww,hh)=>R(c,cx+a*fh/24,top+b*fh/24,ww*fh/24,hh*fh/24);
+    if(rank===11){S("#8a5a30",-8,12,14,6);S("#6b4423",-8,18,2,6);S("#6b4423",4,18,2,6);S("#8a5a30",5,8,4,5);}
+    S(rank===12?"#b3202a":rank===11?"#2f6fb0":"#4f8f3a",-4,rank===11?5:7,8,rank===11?8:12);S("#f1c9a5",-3,rank===11?0:2,6,5);S("#1d1b26",-1,rank===11?2:4,1,1);S("#1d1b26",1,rank===11?2:4,1,1);
+    if(rank===12){S("#f5c030",-4,0,8,2);S("#f5c030",-4,-2,2,2);S("#f5c030",-1,-2,2,2);S("#f5c030",2,-2,2,2);S("#efe3c8",-3,5,6,3);}
+    else if(rank===10){S("#1d1b26",-4,1,8,2);S("#f5c030",-4,17,8,2);}else{S("#1d1b26",-3,-1,6,2);}
+    suitIcon(g,suit,cx+4*fh/24,top+(rank===11?4:9)*fh/24,Math.max(1,Math.round(fh/24)));}
+  return CARDC[k]=c;}
+function spBack(w,h){const k="back_"+w+"x"+h;if(CARDC[k])return CARDC[k];const c=mkC(w,h),g=c.getContext("2d"),R=(col,x,y,ww,hh)=>{g.fillStyle=col;g.fillRect(x,y,ww,hh);};
+  R("#1d1b26",1,0,w-2,h);R("#1d1b26",0,1,w,h-2);R("#8a1f1a",1,1,w-2,h-2);R("#efe3c8",2,2,w-4,1);R("#efe3c8",2,h-3,w-4,1);R("#efe3c8",2,2,1,h-4);R("#efe3c8",w-3,2,1,h-4);
+  for(let y=4;y<h-4;y+=3)for(let x=4+(y/3)%2*1.5;x<w-4;x+=3)R("#b3302a",x|0,y,1,1);R("#f5c030",w/2-2,h/2-2,4,4);return CARDC[k]=c;}
+// Dibuja una carta (o su dorso) con sombra; lift la levanta un poco (elegida)
+function drawCard(cd,x,y,w,h,up,lift){x=Math.round(x);y=Math.round(y-(lift||0));ctx.fillStyle="rgba(0,0,0,.35)";ctx.fillRect(x+2,y+2,w,h);ctx.drawImage(up?spCard(cd.r,cd.s,w,h):spBack(w,h),x,y);}
+function newDeck(){const d=[];for(let s=0;s<4;s++)for(const r of RANKS)d.push({r,s});for(let i=d.length-1;i>0;i--){const j=(rnd()*(i+1))|0;[d[i],d[j]]=[d[j],d[i]];}return d;}
+// ---- Tragaperras "La Txapela de Oro" (máquina de bar) ----
+// 3 rodillos de 20 posiciones, 1/3/5 líneas (5 fichas por línea). El resultado se decide al pulsar JUGAR, como en una máquina real.
+// Estrategia: tras una jugada sin premio a veces se encienden RETENCIONES (guardas hasta 2 rodillos para la siguiente)
+// o AVANCES (bajas un rodillo una posición viendo lo que viene). 3 balones en cualquier sitio: bonus de penaltis (habilidad).
+// Tras un premio en fichas: COBRAR o DOBLAR (mayor o menor con la baraja española, hasta 3 veces).
+const SLOT={syms:["cana","pintxo","txapela","latxa","grua","balon","siete","cria"],cnt:[4,4,3,3,2,2,1,1],
+  p3:{cana:9,pintxo:13,txapela:17,latxa:22,grua:45,siete:100,cria:25},p2:{cana:2,pintxo:2,txapela:3,latxa:3,grua:5,siete:10,cria:3},
+  lines:[[0,0,0],[-1,-1,-1],[1,1,1],[-1,0,1],[1,0,-1]],lineN:[1,3,5],perLine:5,holdP:[.12,.24,.36],nudgeP:[.06,.14,.22],goalMul:2}; // retenciones y avances salen más cuanto más líneas juegas (con 1 línea serían un chollo)
+SLOT.strips=[0,1,2].map(i=>{const s=[];SLOT.cnt.forEach((n,k)=>{for(let j=0;j<n;j++)s.push(k);});const r=srand(31+i*17);for(let j=s.length-1;j>0;j--){const q=(r()*(j+1))|0;[s[j],s[q]]=[s[q],s[j]];}
+  for(let j=0;j<s.length;j++)if(s[j]===s[(j+1)%s.length]&&s[j]>=5){const q=(j+7)%s.length;[s[(j+1)%s.length],s[q]]=[s[q],s[(j+1)%s.length]];}return s;}); // sin dos premios gordos seguidos en la tira
+const SN=20,md=(a,n)=>((a%n)+n)%n;
+function slotSym(g,r,off){return SLOT.strips[r][md(Math.round(g.reels[r].pos)+off,SN)];}
+// Premios de las líneas activas y balones a la vista. Devuelve {win (en fichas), lines:[índices], cria, balls}
+function slotEval(g){const out={win:0,lines:[],cria:false,balls:0,seven:false};const n=SLOT.lineN[g.bet-1];
+  for(let l=0;l<n;l++){const[a,b,c]=SLOT.lines[l].map((o,r)=>slotSym(g,r,o)),A=SLOT.syms[a];if(A==="balon")continue;
+    if(a===b&&b===c){out.win+=SLOT.p3[A]*SLOT.perLine;out.lines.push(l);if(A==="cria")out.cria=true;if(A==="siete")out.seven=true;}
+    else if(a===b){out.win+=SLOT.p2[A]*SLOT.perLine;out.lines.push(l);}}
+  for(let r=0;r<3;r++)for(let o=-1;o<=1;o++)if(SLOT.syms[slotSym(g,r,o)]==="balon")out.balls++;return out;}
+// Iconos de los símbolos (24 px, dibujados a mano)
+const SLIC={};
+function slotIcon(k,sp){const key=k+(sp||"");if(SLIC[key])return SLIC[key];const c=mkC(24,24),g=c.getContext("2d"),R=(col,x,y,w,h)=>{g.fillStyle=col;g.fillRect(x,y,w,h);};
+  if(k==="cana"){R("#8a969a",6,4,12,18);R("#f0f4f5",7,5,10,16);R("#e9a520",7,9,10,12);R("#f5c030",8,10,3,10);R("#fff",6,3,12,4);R("#f4efe2",7,2,9,2);R("#8a969a",17,9,4,2);R("#8a969a",19,9,2,8);R("#8a969a",17,15,4,2);R("rgba(255,255,255,.6)",15,10,1,9);}
+  else if(k==="pintxo"){R("#c98e4a",3,14,18,6);R("#e8b870",3,13,18,2);R("#f5d14a",5,7,14,7);R("#e0a830",5,12,14,2);R("#fff4b0",6,8,6,2);R("#6b4423",11,2,2,12);R("#b3202a",10,4,4,3);}
+  else if(k==="txapela"){R("#1d1b26",3,10,18,8);R("#2e2d3a",4,9,16,3);R("#3a3946",6,8,10,2);R("#1d1b26",11,5,2,4);R("#46445a",4,17,16,2);}
+  else if(k==="latxa"){R("#f4efe2",4,8,14,10);R("#e0dac8",5,16,12,3);R("#fff",6,7,8,3);R("#2a2230",15,7,6,7);R("#c9b28a",14,5,3,4);R("#c9b28a",20,5,3,4);R("#fff",17,9,1,1);R("#2a2230",6,18,2,4);R("#2a2230",14,18,2,4);}
+  else if(k==="grua"){R("#b3202a",5,3,3,19);R("#b3202a",5,3,16,3);R("#7a1f18",5,20,8,2);R("#fff",8,4,2,1);R("#fff",12,4,2,1);R("#fff",16,4,2,1);R("#1d1b26",18,6,1,8);R("#f5c030",16,13,5,3);for(let y=7;y<20;y+=3)R("#7a1f18",6,y,1,1);}
+  else if(k==="balon"){R("#1d1b26",5,3,14,18);R("#1d1b26",3,5,18,14);R("#fff",6,4,12,16);R("#fff",4,6,16,12);R("#1d1b26",10,9,4,4);R("#1d1b26",5,7,3,3);R("#1d1b26",16,7,3,3);R("#1d1b26",7,15,3,3);R("#1d1b26",14,15,3,3);R("#dfe6e8",15,5,3,2);}
+  else if(k==="siete"){R("#7a1010",3,3,18,5);R("#7a1010",12,7,6,6);R("#7a1010",9,12,6,9);R("#e0301f",4,4,16,3);R("#e0301f",13,7,4,5);R("#e0301f",10,12,4,8);R("#f5c030",4,4,16,1);R("#ff8a70",5,5,4,1);}
+  else if(k==="cria"){R("#8a5a10",2,2,20,20);R("#f5c030",3,3,18,18);R("#fff0a0",4,4,6,2);if(sp){const d=DATA.sp[sp];g.drawImage(formImg(d.f[0],d.t,true,24,0),0,1,24,24);}}
+  return SLIC[key]=c;}
+FERIA.G.slot={n:"La Txapela de Oro",d:"Tragaperras de bar: retenciones, avances, bonus de penaltis y doble o nada.",min:5,
+ ic(g){g.fillStyle="#7a1f18";g.fillRect(4,2,24,28);g.fillStyle="#f5c030";g.fillRect(4,2,24,4);g.fillStyle="#fbf6ea";g.fillRect(7,9,18,12);g.drawImage(slotIcon("siete"),7,10,6,10);g.drawImage(slotIcon("siete"),13,10,6,10);g.drawImage(slotIcon("siete"),19,10,6,10);g.fillStyle="#2f9a4a";g.fillRect(10,24,12,4);},
+ odds:["Jugada: 5 fichas por línea (1, 3 o 5 líneas). Cada rodillo tiene 20 posiciones.","3 caras de criatura en línea: la criatura del cartel (especie rara, 30 % de que salga ★) · 1 de cada 8000 por línea.","3 sietes: ×100 · 3 grúas: ×45 · 3 caras: ×25 · 3 latxas: ×22 · 3 txapelas: ×17 · 3 pintxos: ×13 · 3 cañas: ×9 (por línea).","2 iguales en los rodillos 1 y 2: de ×2 a ×10.","3 balones a la vista (1 de cada 37 jugadas): 3 penaltis, cada gol ×2 la apuesta.","Tras una jugada sin premio, retenciones: 12 / 24 / 36 % y avances: 6 / 14 / 22 % (1 / 3 / 5 líneas).","Doble o nada: el premio de cada botón sale de las cartas que quedan; igual pierde. Devuelve el 97 % de media.","Devolución media jugando bien: entre el 87 y el 91 %."],
+ init(g){g.bet=1;g.reels=[0,1,2].map(i=>({pos:(rnd()*SN)|0,v:0,st:"idle",t:0,hold:false,tgt:0,a0:0,d:0}));g.phase="idle";g.win=0;g.shown=0;g.nudges=0;g.holdOK=false;g.hit=null;g.prizes=[];g.log=[];
+   const pool=feriaPool("r");g.jsp=pick(pool);g.dbl=0;g.bonus=null;g.gam=null;g.bulb=0;g.tick=0;},
+ canExit(g){return g.phase==="idle"||g.phase==="nudge"||g.phase==="hold";},exitLines(g){return g.prizes;},
+ cost(g){return SLOT.lineN[g.bet-1]*SLOT.perLine;},
+ btn(g,id){const d=FERIA.G.slot;
+   if(id==="bet"&&g.phase!=="spin"){g.bet=g.bet%3+1;tone(440+g.bet*110,.05,"square",.04);}
+   else if(id==="play"){if(g.phase==="win"){d.collect(g);return;}if(g.phase==="bonus"){d.kick(g);return;}if(g.phase==="gamble")return;if(g.phase!=="idle"&&g.phase!=="hold"&&g.phase!=="nudge")return;d.spin(g);}
+   else if(id==="free"){if(g.phase==="idle"||g.phase==="hold"||g.phase==="nudge")d.spin(g,true);}
+   else if(id.startsWith("r")){const i=+id[1],R=g.reels[i];if(g.phase==="hold"){if(!R.hold&&g.reels.filter(q=>q.hold).length>=2){fMsg("Máximo 2 rodillos","#e0552b");return;}R.hold=!R.hold;tone(R.hold?880:440,.05,"square",.04);}
+     else if(g.phase==="nudge"&&g.nudges>0&&R.st==="idle"){R.st="nudge";R.t=0;R.a0=R.pos;g.nudges--;tone(700,.06,"triangle",.05);}}
+   else if(id==="cobrar"&&g.phase==="win")d.collect(g);
+   else if(id==="doblar"&&g.phase==="win"&&g.win>0&&!g.hit.cria)d.gamble(g);
+   else if((id==="mayor"||id==="menor")&&g.phase==="gamble"&&!g.gam.res)d.guess(g,id==="mayor");
+   else if(id==="gcobrar"&&g.phase==="gamble"&&!g.gam.res)d.collect(g);},
+ key(g,k){const d=FERIA.G.slot;if(k===" "||k==="Enter")d.btn(g,"play");else if(k==="1"||k==="2"||k==="3")d.btn(g,"r"+(+k-1));else if(k==="b")d.btn(g,"bet");else if(k==="c")d.btn(g,g.phase==="gamble"?"gcobrar":"cobrar");else if(k==="d")d.btn(g,"doblar");else if(k==="ArrowUp")d.btn(g,"mayor");else if(k==="ArrowDown")d.btn(g,"menor");},
+ dn(g,x,y){if(g.phase==="bonus")FERIA.G.slot.kick(g);},
+ spin(g,free){const d=FERIA.G.slot,cost=d.cost(g);if(!feriaPay(cost,free&&feriaSt().free>0)){fMsg(feriaWhyNot(cost),"#e0552b");return;}
+   g.phase="spin";g.win=0;g.shown=0;g.hit=null;g.nudges=0;const held=g.phase==="hold";g.holdOK=false;g.t=0;
+   // resultado decidido ahora; el último rodillo tarda más si los dos primeros prometen (expectación)
+   g.reels.forEach((R,i)=>{if(R.hold){R.st="held";return;}R.tgt=(rnd()*SN)|0;R.st="spin";R.v=0;R.t=0;R.stopAt=.75+.42*i;R.kick=0;});
+   const tg=g.reels.map(R=>R.hold?Math.round(R.pos):R.tgt),sy=(r,o)=>SLOT.syms[SLOT.strips[r][md(tg[r]+o,SN)]],balls01=[0,1].reduce((a,r)=>a+[-1,0,1].filter(o=>sy(r,o)==="balon").length,0);
+   const pair01=SLOT.lines.slice(0,SLOT.lineN[g.bet-1]).some(L=>{const a=sy(0,L[0]),b=sy(1,L[1]);return a===b&&(a==="cria"||a==="siete"||a==="grua");});
+   if((balls01>=2||pair01)&&g.reels[2].st==="spin"){g.reels[2].stopAt+=1.1;g.tease=1;}else g.tease=0;
+   noise(.05,.05);tone(220,.12,"sawtooth",.04,0,440);},
+ settle(g){const d=FERIA.G.slot;g.reels.forEach(R=>{R.hold=false;if(R.st==="held")R.st="idle";});const e=slotEval(g);g.hit=e;
+   if(e.cria){const t=feriaCre("r",g.jsp);g.prizes.push(t);fMsg("¡PREMIO GORDO! "+DATA.sp[g.jsp].n[0],"#f5c030",3);SFX.evo();for(let i=0;i<120;i++)spawn(rnd()*W,-rnd()*40,(rnd()-.5)*60,40+rnd()*60,2.6,["#f5c030","#fff","#e0301f"][i%3],2,30);}
+   if(e.balls>=3){g.bonus={n:0,goals:0,st:"aim",t:0,kx:.5,kv:.6,ball:null,ax:.5,res:null};g.phase="bonus";g.pendWin=e.win;[523,659,784,1047,1319].forEach((f,i)=>tone(f,.12,"square",.06,i*.08));fMsg("¡BONUS DE PENALTIS!","#7cc050",2);return;}
+   if(e.win>0){g.win=e.win;g.phase="win";d.jingle(e.win/d.cost(g));if(e.seven)for(let i=0;i<80;i++)spawn(W/2,H*.4,(rnd()-.5)*200,-rnd()*160,1.6,["#e0301f","#f5c030"][i%2],2,160);return;}
+   // sin premio: a veces retenciones o avances
+   const r=rnd(),nP=SLOT.nudgeP[g.bet-1],hP=SLOT.holdP[g.bet-1];if(r<nP){g.nudges=1+((rnd()*3)|0);g.phase="nudge";fMsg(`¡${g.nudges} AVANCE${g.nudges>1?"S":""}!`,"#6ad1c4");[660,880].forEach((f,i)=>tone(f,.08,"square",.05,i*.08));}
+   else if(r<nP+hP){g.phase="hold";fMsg("¡RETENCIONES!","#6ad1c4");[660,990].forEach((f,i)=>tone(f,.08,"square",.05,i*.08));}
+   else g.phase="idle";},
+ jingle(m){const n=m>=20?10:m>=5?6:3;for(let i=0;i<n;i++)tone([523,659,784,1047][i%4]*(i>=4?2:1),.1,"square",.05,i*.07);},
+ collect(g){if(g.win>0){feriaGain(g.win);g.log.push(g.win);const n=Math.min(40,Math.ceil(g.win/5));for(let i=0;i<n;i++){spawn(g.trayX+(rnd()-.5)*g.trayW*.6,g.trayY-40-rnd()*20,(rnd()-.5)*30,40,1.2,["#f5c030","#c9891a"][i%2],3,300);tone(1800+rnd()*400,.03,"square",.02,i*.03);}}
+   g.win=0;g.shown=0;g.phase="idle";g.gam=null;g.dbl=0;save();},
+ gamble(g){g.phase="gamble";const dk=newDeck();g.gam={dk,cur:dk.pop(),nx:dk.pop(),res:null,t:0};tone(330,.06,"square",.05);},
+ // Cuota de mayor/menor según las cartas que quedan (la siguiente está entre ellas); igual pierde. Paga el 97 % de lo justo.
+ odds(G){const rest=[...G.dk,G.nx],a=RANKS.indexOf(G.cur.r),hi=rest.filter(c=>RANKS.indexOf(c.r)>a).length/rest.length,lo=rest.filter(c=>RANKS.indexOf(c.r)<a).length/rest.length,m=p=>p>0?Math.max(1.05,Math.floor(.97/p*20)/20):0;return{hi:m(hi),lo:m(lo),ph:hi,pl:lo};},
+ guess(g,up){const G=g.gam,a=RANKS.indexOf(G.cur.r),b=RANKS.indexOf(G.nx.r),o=FERIA.G.slot.odds(G),m=up?o.hi:o.lo;if(!m)return;G.res=b!==a&&(b>a)===up?"bien":"mal";G.t=0;
+   if(G.res==="bien"){g.win=Math.floor(g.win*m);g.dbl++;SFX.bien();}else{g.win=0;SFX.mal();}},
+ kick(g){const B=g.bonus;if(!B||B.st!=="aim")return;B.st="fly";B.t=0;B.ax=B.aim;B.kgo=clamp(B.ax+(rnd()-.5)*.5,.12,.88);noise(.12,.1);tone(300,.2,"sawtooth",.05,0,90);},
+ up(g,dt){const d=FERIA.G.slot;g.bulb+=dt;
+   if(g.phase==="spin"){g.t+=dt;let all=true;g.reels.forEach((R,i)=>{if(R.st==="held"||R.st==="idle")return;all=false;R.t+=dt;
+       if(R.st==="spin"){R.v=R.t<.12?-2:Math.min(19,R.v+dt*90);R.pos-=R.v*dt;const f=Math.floor(R.pos);if(f!==R.lf){R.lf=f;if(g.tick++%2===0)tone(i===2&&g.tease?900+R.t*300:1300,.012,"square",.012);}
+         if(R.t>=R.stopAt){R.st="stop";R.t=0;R.a0=R.tgt+4+md(R.pos,1);}}
+       else if(R.st==="stop"){const k=Math.min(1,R.t/.42),e=1-Math.pow(1-k,3);R.pos=R.a0+(R.tgt-.22-R.a0)*e;if(k>=1){R.st="bounce";R.t=0;noise(.05,.07);tone(110,.08,"square",.05);}}
+       else if(R.st==="bounce"){const k=Math.min(1,R.t/.16);R.pos=R.tgt-.22*(1-k)+Math.sin(k*Math.PI)*.04;if(k>=1){R.pos=R.tgt;R.st="idle";}}});
+     if(all)d.settle(g);}
+   g.reels.forEach(R=>{if(R.st==="nudge"){R.t+=dt;const k=Math.min(1,R.t/.18);R.pos=R.a0-k;if(k>=1){R.pos=Math.round(R.a0-1);R.st="idle";noise(.04,.05);tone(160,.06,"square",.04);const e=slotEval(g);if(e.win>0){g.nudges=0;g.hit=e;g.win=e.win;g.phase="win";d.jingle(e.win/d.cost(g));}else if(g.nudges<=0)g.phase="idle";}}});
+   if(g.phase==="win"&&g.shown<g.win){g.shown=Math.min(g.win,g.shown+Math.max(1,g.win*dt*1.5));}
+   if(g.phase==="gamble"&&g.gam.res){g.gam.t+=dt;if(g.gam.t>1.1){const G=g.gam;if(G.res==="mal"){g.phase="idle";g.gam=null;g.dbl=0;}else if(g.dbl>=3){d.collect(g);}else{G.cur=G.nx;G.nx=G.dk.length?G.dk.pop():newDeck().pop();G.res=null;}}}
+   if(g.phase==="bonus"){const B=g.bonus;B.t+=dt;B.aim=.5+Math.sin(B.t*2.4+B.n)*.42*Math.sin(B.t*.7+1.3+B.n);// la mirilla va y viene con ritmo irregular
+     B.kx+=(B.kgo!=null&&B.st==="fly"?(B.kgo-B.kx)*dt*9:Math.sin(B.t*1.3)*dt*.25);
+     if(B.st==="fly"&&B.t>.45){const goal=Math.abs(B.ax-B.kx)>.16&&B.ax>.06&&B.ax<.94;B.st="res";B.t=0;B.res=goal?"gol":B.ax<=.06||B.ax>=.94?"fuera":"parada";if(goal){B.goals++;SFX.gol();}else sfx("mal");}
+     if(B.st==="res"&&B.t>1.1){B.n++;B.kgo=null;B.kx=.5;B.res=null;if(B.n>=3){const bw=Math.round(B.goals*SLOT.goalMul*d.cost(g))+(g.pendWin||0);g.bonus=null;if(bw>0){g.win=bw;g.hit={win:bw,lines:[],cria:false};g.phase="win";d.jingle(bw/d.cost(g));}else g.phase="idle";}else{B.st="aim";B.t=0;}}}},
+ dr(g){const d=FERIA.G.slot;ctx.drawImage(feriaBarBg(),0,0);
+   const port=H>W*1.1,mw=Math.round(port?W-10:Math.min(W*.46,300)),mh=Math.round(port?H-SAFE.t-SAFE.b-24:H-14),mx=Math.round(W/2-mw/2),my=Math.round(port?SAFE.t+20:8);
+   // mueble: cuerpo, cantos cromados y sombra
+   fR("rgba(0,0,0,.4)",mx+6,my+8,mw,mh);const bg=ctx.createLinearGradient(mx,0,mx+mw,0);bg.addColorStop(0,"#4a0f0c");bg.addColorStop(.5,"#8a1f1a");bg.addColorStop(1,"#4a0f0c");ctx.fillStyle=bg;ctx.fillRect(mx,my,mw,mh);
+   const ch=ctx.createLinearGradient(mx,0,mx+mw,0);ch.addColorStop(0,"#6b7184");ch.addColorStop(.3,"#e8ecf2");ch.addColorStop(.6,"#9aa3b0");ch.addColorStop(1,"#5a6070");ctx.fillStyle=ch;ctx.fillRect(mx,my,mw,3);ctx.fillRect(mx,my+mh-3,mw,3);fR("#c9ced8",mx,my,2,mh);fR("#c9ced8",mx+mw-2,my,2,mh);
+   const h1=Math.round(mh*.13),h2=Math.round(mh*.2),h3=Math.round(mh*.33),h4=Math.round(mh*.08),h5=mh-h1-h2-h3-h4-10;let y=my+4;
+   // marquesina con bombillas que corren
+   fR("#1d1b26",mx+5,y,mw-10,h1);const nb=Math.floor((mw-14)/8);for(let i=0;i<nb;i++){const on=((i+Math.floor(g.bulb*(g.phase==="win"?14:5)))%3)===0;fR(on?"#fff6c0":"#6b5a2a",mx+8+i*8,y+2,3,2);fR(on?"#fff6c0":"#6b5a2a",mx+8+i*8,y+h1-4,3,2);}
+   feriaNeon("TXAPELA DE ORO",W/2,y+h1*.58,"#f5c030",port?9:11);txt(`PREMIO GORDO: ${DATA.sp[g.jsp].n[0].toUpperCase()}`,W/2,y+h1-6,"#ff8a70",5,"center","none",9);y+=h1+2;
+   // tabla de premios (se enciende la fila que toca)
+   fR("#0d1530",mx+5,y,mw-10,h2);fR("#2a3a6a",mx+5,y,mw-10,1);const rows=["cria","siete","grua","latxa","txapela","pintxo","cana"],cols=port?1:2,rh=(h2-4)/Math.ceil(rows.length/cols),cw=(mw-14)/cols,hitS=g.hit&&g.hit.lines.length?SLOT.syms[slotSym(g,0,SLOT.lines[g.hit.lines[0]][0])]:null;
+   rows.forEach((s,i)=>{const cx=mx+7+(i%cols)*cw,cy=y+2+Math.floor(i/cols)*rh,is=hitS===s&&(frame>>3)%2,ic=Math.max(6,Math.round(rh-2));if(is)fR("rgba(245,192,48,.35)",cx,cy,cw-2,rh);for(let j=0;j<3;j++)ctx.drawImage(slotIcon(s,s==="cria"?g.jsp:null),cx+j*(ic+1),cy+1,ic,ic);
+     txt(s==="cria"?"CRIATURA":"×"+SLOT.p3[s],cx+3*(ic+1)+4,cy+rh*.72,is?"#fff":"#f5c030",5,"left","none",9);});y+=h2+3;
+   // ventana de rodillos (o pantalla del bonus)
+   const wx=mx+10,ww=mw-20,wy=y,wh=h3;fR("#1d1b26",wx-3,wy-3,ww+6,wh+6);fR("#c9ced8",wx-3,wy-3,ww+6,1);
+   if(g.phase==="bonus")d.drawBonus(g,wx,wy,ww,wh);else{const rw=Math.floor((ww-8)/3),sh=wh/3,act=SLOT.lineN[g.bet-1];
+     g.reels.forEach((R,i)=>{const rx=wx+4+i*(rw+2);fR("#fbf6ea",rx,wy,rw,wh);ctx.save();ctx.beginPath();ctx.rect(rx,wy,rw,wh);ctx.clip();const blur=Math.abs(R.v)>8&&R.st==="spin",base=Math.floor(R.pos),fr=R.pos-base;
+       for(let o=-2;o<=2;o++){const s=SLOT.strips[i][md(base+o,SN)],cy=wy+wh/2+(o-fr)*sh,sz=Math.min(rw-6,sh-4),im=slotIcon(SLOT.syms[s],SLOT.syms[s]==="cria"?g.jsp:null);
+         if(blur){ctx.globalAlpha=.35;for(let q=-2;q<=2;q++)ctx.drawImage(im,rx+rw/2-sz/2,cy-sz/2+q*sh*.12,sz,sz);ctx.globalAlpha=1;}else ctx.drawImage(im,Math.round(rx+rw/2-sz/2),Math.round(cy-sz/2),sz,sz);}
+       const cyl=ctx.createLinearGradient(0,wy,0,wy+wh);cyl.addColorStop(0,"rgba(0,0,0,.55)");cyl.addColorStop(.25,"rgba(0,0,0,0)");cyl.addColorStop(.75,"rgba(0,0,0,0)");cyl.addColorStop(1,"rgba(0,0,0,.55)");ctx.fillStyle=cyl;ctx.fillRect(rx,wy,rw,wh);ctx.restore();
+       if(R.hold||R.st==="held"){fR("rgba(106,209,196,.25)",rx,wy,rw,wh);txt("RETENIDO",rx+rw/2,wy+wh-3,"#6ad1c4",5,"center",null,9);}});
+     // líneas de premio: marcadores a los lados y la línea ganadora dibujada
+     SLOT.lines.forEach((L,l)=>{const yl=wy+wh/2+L[0]*sh,yr=wy+wh/2+L[2]*sh,on=l<act,col=["#f5c030","#e0552b","#4fb0e8","#7cc050","#b58ae0"][l];fR(on?col:"#3a3846",wx-3,yl-3,3,6);fR(on?col:"#3a3846",wx+ww,yr-3,3,6);});
+     if(g.hit&&g.hit.lines.length&&(frame>>3)%2)g.hit.lines.forEach(l=>{const L=SLOT.lines[l],col=["#f5c030","#e0552b","#4fb0e8","#7cc050","#b58ae0"][l];ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();for(let r=0;r<3;r++){const px=wx+4+r*(rw+2)+rw/2,py=wy+wh/2+L[r]*sh;r?ctx.lineTo(px,py):ctx.moveTo(wx,py);}ctx.lineTo(wx+ww,wy+wh/2+L[2]*sh);ctx.stroke();ctx.lineWidth=1;});
+     const gl=ctx.createLinearGradient(wx,wy,wx+ww,wy+wh);gl.addColorStop(0,"rgba(255,255,255,.1)");gl.addColorStop(.35,"rgba(255,255,255,0)");gl.addColorStop(.36,"rgba(255,255,255,.06)");gl.addColorStop(.45,"rgba(255,255,255,0)");ctx.fillStyle=gl;ctx.fillRect(wx,wy,ww,wh);
+     if(g.phase==="gamble")d.drawGamble(g,wx,wy,ww,wh);}
+   y+=h3+5;
+   // marcadores LED
+   const led=(lab,v,x,w)=>{fR("#0a0a0e",x,y,w,h4);fR("#2a0d0d",x+1,y+1,w-2,h4-2);txt(lab,x+w/2,y+h4*.38,"#9a5a50",4,"center","none",7);txt(String(Math.floor(v)).padStart(5,"0"),x+w/2,y+h4-2,"#ff3b2a",7,"center","none",11);};
+   const lw=(mw-20)/3;led("CRÉDITO",S.fichas,mx+8,lw-2);led("APUESTA",d.cost(g),mx+8+lw,lw-2);led("PREMIO",g.phase==="win"?g.shown:g.win,mx+8+lw*2,lw-2);y+=h4+4;
+   // botonera
+   const bh=Math.max(12,Math.round(h5*.3)),rw=(mw-20)/3,hold=g.phase==="hold",nud=g.phase==="nudge";
+   for(let i=0;i<3;i++)fBtn("r"+i,mx+10+i*rw+2,y,rw-4,bh,nud?"AVANCE ▼":"RETENER",{col:hold?(g.reels[i].hold?"#6ad1c4":"#dfe8f0"):nud?"#f5c030":"#6b6f7e",off:!(hold||nud&&g.nudges>0),lit:nud&&g.nudges>0,sz:port?5:6,key:String(i+1)});
+   if(nud)txt(`${g.nudges} avance${g.nudges===1?"":"s"}`,W/2,y+bh+8,"#f5c030",6,"center",null,10);y+=bh+(nud?12:6);
+   const b2=Math.max(14,Math.round(h5*.34)),busy=g.phase==="spin"||g.phase==="bonus"&&g.bonus.st!=="aim";
+   if(g.phase==="win"){fBtn("cobrar",mx+10,y,(mw-24)/2,b2,"COBRAR",{col:"#e0552b",fg:"#fff",key:"c"});fBtn("doblar",mx+14+(mw-24)/2,y,(mw-24)/2,b2,"DOBLAR",{col:"#f5c030",key:"d",off:g.hit&&g.hit.cria});}
+   else if(g.phase==="gamble"){const w3=(mw-28)/3,o=d.odds(g.gam),f=v=>("×"+v.toFixed(1)).replace(".",",");fBtn("mayor",mx+10,y,w3,b2,o.hi?"▲ "+f(o.hi):"—",{col:"#7cc050",key:"ArrowUp",off:!!g.gam.res||!o.hi,sz:port?6:7});fBtn("menor",mx+14+w3,y,w3,b2,o.lo?"▼ "+f(o.lo):"—",{col:"#4fb0e8",key:"ArrowDown",off:!!g.gam.res||!o.lo,sz:port?6:7});fBtn("gcobrar",mx+18+w3*2,y,w3,b2,"COBRAR",{col:"#e0552b",fg:"#fff",off:!!g.gam.res,key:"c"});}
+   else{const F=feriaSt();fBtn("bet",mx+10,y,(mw-24)*.3,b2,`${SLOT.lineN[g.bet-1]} LÍN.`,{col:"#4fb0e8",off:busy,key:"b",sz:port?5:7});
+     if(F.free>0&&!busy)fBtn("free",mx+14+(mw-24)*.3,y,(mw-24)*.7,b2,"TIRADA GRATIS",{col:"#7cc050",lit:true,key:"g"});
+     else fBtn("play",mx+14+(mw-24)*.3,y,(mw-24)*.7,b2,g.phase==="bonus"?"¡CHUTA!":"JUGAR",{col:"#2f9a4a",fg:"#fff",off:busy,key:[" ","Enter"],lit:g.phase==="bonus"||g.phase==="hold"});}
+   y+=b2+5;g.trayX=W/2;g.trayW=mw*.6;g.trayY=my+mh-6;fR("#1d1b26",W/2-mw*.3,my+mh-12,mw*.6,8);fR("#3a3846",W/2-mw*.3+2,my+mh-10,mw*.6-4,4);
+   // panel lateral en horizontal: cómo se juega
+   if(!port&&mx>110){const px=mx+mw+14,pw=Math.min(W-px-10,150);fR("rgba(29,27,38,.85)",px,my+20,pw,120);txt("CÓMO SE JUEGA",px+pw/2,my+32,"#f5c030",6,"center",null,10);
+     ["Espacio: jugar · B: líneas","1 2 3: retener / avanzar","C cobrar · D doblar","↑ ↓ mayor / menor","3 balones: penaltis"].forEach((s,i)=>txt(s,px+6,my+48+i*16,"#efe3c8",5,"left","none",9));}},
+ drawGamble(g,x,y,w,h){const G=g.gam;fR("rgba(10,20,14,.92)",x,y,w,h);const cw=Math.min(Math.round(h*.5),Math.round(w*.2)),chh=Math.round(cw*1.5);
+   txt(`DOBLE O NADA · ${g.win} fichas`,x+w/2,y+10,"#f5c030",6,"center",null,10);drawCard(G.cur,x+w/2-cw-8,y+h/2-chh/2+6,cw,chh,true);drawCard(G.nx,x+w/2+8,y+h/2-chh/2+6,cw,chh,!!G.res);
+   if(G.res)txt(G.res==="bien"?"¡BIEN!":G.nx.r===G.cur.r?"IGUAL: PIERDES":"PIERDES",x+w/2,y+h-4,G.res==="bien"?"#7cc050":"#e0552b",7,"center",null,11);
+   else{const o=FERIA.G.slot.odds(G);txt(`¿Mayor o menor que ${G.cur.r}? ${Math.round(o.ph*100)} % / ${Math.round(o.pl*100)} %`,x+w/2,y+h-4,"#efe3c8",5,"center","none",9);}
+   txt(`${g.dbl}/3`,x+w-6,y+10,"#9a8f78",5,"right","none",8);},
+ drawBonus(g,x,y,w,h){const B=g.bonus;const sk=ctx.createLinearGradient(0,y,0,y+h);sk.addColorStop(0,"#1f5a2a");sk.addColorStop(1,"#3f8a35");ctx.fillStyle=sk;ctx.fillRect(x,y,w,h);
+   for(let i=0;i<6;i++)fR(i%2?"#3a8030":"#43903a",x,y+h*.35+i*h*.11,w,h*.11);const gx=x+w*.12,gw=w*.76,gy=y+h*.17,gh=h*.38;fR("#dfe6e8",gx,gy,gw,gh);for(let i=0;i<gw;i+=4)fR("#aab4b8",gx+i,gy,1,gh);for(let j=0;j<gh;j+=4)fR("#aab4b8",gx,gy+j,gw,1);
+   fR("#fff",gx-3,gy-3,3,gh+3);fR("#fff",gx+gw,gy-3,3,gh+3);fR("#fff",gx-3,gy-3,gw+6,3);
+   const kx=gx+B.kx*gw,sp=DATA.sp[g.jsp],ks=Math.round(gh*.9);ctx.save();if(B.st!=="aim"&&B.kgo!=null){ctx.translate(kx,gy+gh);ctx.rotate(clamp((B.kgo-.5)*2,-1,1)*.5*Math.min(1,B.t*3));ctx.translate(-kx,-(gy+gh));}ctx.drawImage(formImg(sp.f[0],sp.t,false,32,(frame>>4)&1),kx-ks/2,gy+gh-ks,ks,ks);ctx.restore();
+   if(B.st==="aim"){const ax=gx+B.aim*gw,ay=gy+gh*.45;ctx.strokeStyle="#f5c030";ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,5,0,7);ctx.stroke();ctx.lineWidth=1;fR("#f5c030",ax-8,ay,4,1);fR("#f5c030",ax+5,ay,4,1);}
+   const k=B.st==="fly"?Math.min(1,B.t/.45):B.st==="res"?1:0,bx=lerp(x+w/2,gx+B.ax*gw,k),by=lerp(y+h-18,gy+gh*.45,k);bigBall(bx,by,Math.sin(k*Math.PI)*6,4);
+   txt(`PENALTI ${Math.min(3,B.n+1)}/3 · GOLES ${B.goals} · ×${SLOT.goalMul} por gol`,x+w/2,y+8,"#fff",6,"center",null,10);if(B.st==="aim")txt("Chuta cuando la mirilla esté lejos del portero",x+w/2,y+h-3,"#f5d142",5,"center",null,8);if(B.res)bigTxt(B.res==="gol"?"¡GOL!":B.res==="fuera"?"FUERA":"¡PARADA!",x+w/2,y+h*.6,B.res==="gol"?"#f5c030":"#e0552b",12,18);}
+};
+FERIA.order.push("slot");
 $("bSnd").textContent=AU.on?"♪":"✕♪";
 window.G={get E(){return E;},get ROAM(){return ROAM;},get MG2(){return MG2;},get W(){return W;},get H(){return H;},get F(){return{FX0,FX1,FY0,FY1,GCX,MIDY};},get S(){return S;},get M(){return M;},get scene(){return scene;},set HALF(v){HALF=v;},P,DATA,newGame,startMatchFlow,zoneTeam,buildTeam,newCre,addCre,say,testAct,startRecruit};
 // Los sprites PixelLab se decodifican antes del primer dibujo (formImg, human e itemImg los usan de forma síncrona y cachean).
