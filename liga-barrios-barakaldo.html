@@ -4290,6 +4290,141 @@ FERIA.G.fronton={n:"Frontón",d:"Pelota a mano contra el pelotari de otro barrio
      txt(`${g.score[0]} - ${g.score[1]} · peloteo más largo: ${g.longest}`,W/2,H*.3+42,"#efe3c8",6,"center",null,9);if(w)txt(`+${g.riv.pr} fichas`,W/2,H*.3+56,"#f5d142",6,"center",null,9);
      fBtn("otra",W/2-75,H-SAFE.b-(port?40:34),150,26,"OTRO (ELIGE RIVAL)",{col:"#2f8a3a",key:"Enter"});}}};
 FERIA.order.push("fronton");
+// ---- Chapas en la acera: la Vuelta pintada con tiza sobre baldosas de Bilbao, una vuelta contra tres del barrio ----
+// Habilidad: tira hacia atrás para dar el capirotazo; la guía solo enseña el principio del recorrido y con más fuerza hay más error.
+// Estrategia: el interior de las curvas es más corto pero se sale antes; el sumidero devuelve la chapa; el charco frena;
+// chocar a otra chapa la empuja (si la sacas, vuelve a su sitio). Si tu chapa acaba fuera o atajando, vuelve a donde estaba.
+const CHP={R:2.1,mu:26,vmax:36,cost:10,N:360,e:.82,pr:[30,10,0,0],T:null};
+function chpTrack(){if(CHP.T)return CHP.T;
+  const P=[[22,51,11],[46,52,11],[70,50,11],[86,44,11],[92,30,10],[86,15,10],[70,9,10],[58,13,9],[52,24,8],[44,26,8],[38,16,9],[26,9,10],[12,13,10],[7,27,10],[11,41,11]],n=P.length,N=CHP.N,c=[],w=[];
+  for(let i=0;i<N;i++){const u=i/N*n,k=Math.floor(u),t=u-k,p=j=>P[(k+j+n)%n],cr=(a,b,c2,d)=>.5*(2*b+(-a+c2)*t+(2*a-5*b+4*c2-d)*t*t+(-a+3*b-3*c2+d)*t*t*t);
+    c.push([cr(p(-1)[0],p(0)[0],p(1)[0],p(2)[0]),cr(p(-1)[1],p(0)[1],p(1)[1],p(2)[1])]);w.push(p(0)[2]*(1-t)+p(1)[2]*t);}
+  const nr=c.map((q,i)=>{const a=c[(i+N-1)%N],b=c[(i+1)%N],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1;return[-dy/l,dx/l];});
+  let L=0;for(let i=0;i<N;i++){const b=c[(i+1)%N];L+=Math.hypot(b[0]-c[i][0],b[1]-c[i][1]);}
+  // sumidero en el interior de la curva grande de la derecha; charco en la recta de arriba
+  const di=Math.round(N*.27),pi=Math.round(N*.75),ds=c[di],dn=nr[di];
+  CHP.T={c,w,n:nr,L,sp:L/N,drain:{x:ds[0]-dn[0]*w[di]*.3,y:ds[1]-dn[1]*w[di]*.3,r:2.3},puddle:{x:c[pi][0],y:c[pi][1],rx:5.5,ry:3.2}};
+  return CHP.T;}
+// Muestra más cercana dentro de una ventana (para seguir el avance sin saltar a otro tramo)
+function chpNear(T,x,y,from,a,b){const N=CHP.N;let bi=-1,bd=1e9;for(let k=a;k<=b;k++){const i=((from+k)%N+N)%N,q=T.c[i],d=(q[0]-x)**2+(q[1]-y)**2;if(d<bd){bd=d;bi=i;}}return{i:bi,d:Math.sqrt(bd)};}
+function chpStep(cs,T,h){let hit=0;const R=CHP.R;
+  for(const c of cs){const v=Math.hypot(c.vx,c.vy);if(v<=0)continue;const pd=T.puddle,inP=((c.x-pd.x)/pd.rx)**2+((c.y-pd.y)/pd.ry)**2<1,dv=CHP.mu*(inP?3.2:1)*h;
+    if(v<=dv||v<.4){c.vx=c.vy=0;continue;}c.vx*=(v-dv)/v;c.vy*=(v-dv)/v;c.x+=c.vx*h;c.y+=c.vy*h;c.path+=v*h;}
+  for(let i=0;i<cs.length;i++)for(let j=i+1;j<cs.length;j++){const a=cs[i],b=cs[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>=2*R||d===0)continue;
+    const nx=dx/d,ny=dy/d,rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny,ov=(2*R-d)/2;a.x-=nx*ov;a.y-=ny*ov;b.x+=nx*ov;b.y+=ny*ov;
+    if(rv<0){const jj=-(1+CHP.e)/2*rv;a.vx-=jj*nx;a.vy-=jj*ny;b.vx+=jj*nx;b.vy+=jj*ny;hit=Math.max(hit,-rv);a.hit=b.hit=true;}}
+  return hit;}
+// Al pararse todo: cada chapa movida queda dentro, vuelve por salirse/atajar/sumidero, y avanza en el circuito
+function chpSettle(cs,T){const ev=[],N=CHP.N;
+  for(const c of cs){if(c.path<.05)continue;const dr=T.drain,why=Math.hypot(c.x-dr.x,c.y-dr.y)<dr.r?"¡Al sumidero!":null;
+    const nb=chpNear(T,c.x,c.y,c.pi,-Math.round(N*.06),Math.round(N*.3));let res=why;
+    if(!res&&nb.d>T.w[nb.i]/2)res=chpNear(T,c.x,c.y,0,0,N-1).d<=T.w[chpNear(T,c.x,c.y,0,0,N-1).i]/2?"¡Atajo!":"¡Fuera!";
+    if(!res){let dl=(nb.i-c.pi+N)%N;if(dl>N/2)dl-=N;if(dl*T.sp>c.path*1.6+4)res="¡Atajo!";else{c.prog+=dl;c.pi=nb.i;}}
+    if(res){c.x=c.px;c.y=c.py;c.outs++;ev.push([c,res]);}
+    c.px=c.x;c.py=c.y;c.path=0;c.vx=c.vy=0;}
+  return ev;}
+function chpSim(cs,T,mover,a,p){const s=cs.map(c=>({...c,path:0,hit:false}));const m=s[mover],v=p*CHP.vmax;m.vx=Math.cos(a)*v;m.vy=Math.sin(a)*v;
+  for(let k=0;k<600;k++){chpStep(s,CHP.T,1/60);if(s.every(c=>!c.vx&&!c.vy))break;}const ev=chpSettle(s,T);return{s,ev};}
+// IA: prueba objetivos por delante en el circuito (más o menos lejos, por dentro o por fuera) con su propio error
+function chpAi(g,i){const T=CHP.T,cs=g.cs,me=cs[i],N=CHP.N,sk=me.sk||{a:.02,p:.06};let best=null,bs=-1e9;
+  for(const look of[10,16,22,28,34,40,46])for(const off of[-.28,0,.28]){const k=Math.round(look/T.sp),j=(me.pi+k)%N,tx=T.c[j][0]+T.n[j][0]*T.w[j]*off,ty=T.c[j][1]+T.n[j][1]*T.w[j]*off;
+    const dist=Math.hypot(tx-me.x,ty-me.y);if(dist<3)continue;const a0=Math.atan2(ty-me.y,tx-me.x),p0=Math.min(1,Math.sqrt(2*CHP.mu*dist)/CHP.vmax);
+    for(const da of[-.04,0,.04]){let sc=0;for(let r=0;r<3;r++){const a=a0+da+gauss()*sk.a,p=clamp(p0*(1+gauss()*sk.p),.05,1),{s,ev}=chpSim(cs,T,i,a,p);
+        const mine=ev.find(e=>e[0]===s[i]);sc+=(s[i].prog-me.prog)*T.sp-(mine?6:0)+s.reduce((t,c,q)=>q===i?t:t+(cs[q].prog-c.prog)*T.sp*.3,0);}
+      sc/=3;if(sc>bs){bs=sc;best=[a0+da,p0];}}}
+  return best||[Math.atan2(T.c[(me.pi+20)%N][1]-me.y,T.c[(me.pi+20)%N][0]-me.x),.4];}
+FERIA.G.chapas={n:"Chapas",d:"La Vuelta en la acera: capirotazos por un circuito de tiza contra tres del barrio. Una vuelta.",min:CHP.cost,
+ ic(g){g.fillStyle="#b8b4aa";g.fillRect(0,0,32,32);g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(16,16,11,.3,5.5);g.stroke();[[8,10,"#2f6fb0"],[20,22,"#b3202a"]].forEach(([x,y,c])=>{g.fillStyle="#d8d2c2";g.beginPath();g.arc(x,y,5,0,7);g.fill();g.fillStyle=c;g.beginPath();g.arc(x,y,3.5,0,7);g.fill();});},
+ odds:[`Entrada: ${CHP.cost} fichas. Una vuelta al circuito contra 3 chapas; tiráis por turnos.`,`1º: ${CHP.pr[0]} fichas · 2º: ${CHP.pr[1]} fichas. Si ganas sin salirte ni una vez, además una criatura.`,"Tu chapa vuelve a su sitio si acaba fuera de las rayas, en el sumidero o si ataja por fuera del circuito.","Si empujas a otra chapa y la sacas, vuelve a su sitio. El charco frena el triple.","Error del tiro: crece con la fuerza y baja con el Tiro de tu criatura con más Tiro."],
+ init(g){chpTrack();Object.assign(g,{st:"intro",t:0,prizes:[],msg:null,aim:{a:0,p:0},spd:1});},
+ canExit(g){return g.st==="intro"||g.st==="fin";},exitLines(g){return g.prizes;},
+ start(g){const d=FERIA.G.chapas,T=chpTrack();if(!g.auto&&!feriaPay(CHP.cost,feriaSt().free>0)){fMsg(feriaWhyNot(CHP.cost),"#e0552b");return;}
+   const lv=avgLvl(),zs=DATA.zones.map((z,i)=>i).filter(i=>DATA.zones[i].roster).sort(()=>rnd()-.5).slice(0,3),best=S.team.slice().sort((a,b)=>cStat(b,"tir")-cStat(a,"tir"))[0];
+   const rs=zs.map((z,k)=>{const Tm=zoneTeam(z,Math.max(3,lv+k-1)),c=Tm.cre[Tm.cre.length-1-k]||Tm.cre[0];return{c,name:Tm.name,col:Tm.kit[0],sk:[{a:.035,p:.08},{a:.025,p:.06},{a:.016,p:.045}][k]};});
+   const all=[{c:best,name:"Tú",col:"#2f6fb0",me:true,sk:g.auto?{a:g.autoA||.03,p:.06}:null},...rs];
+   g.cs=all.map((o,i)=>{const j=(CHP.N-4-(i>>1)*5)%CHP.N,q=T.c[j],nn=T.n[j],side=(i%2?-1:1)*T.w[j]*.22;const x=q[0]+nn[0]*side,y=q[1]+nn[1]*side;
+     return{...o,x,y,px:x,py:y,vx:0,vy:0,pi:j,prog:j-CHP.N,path:0,outs:0,hit:false,tir:cStat(o.c,"tir")};});
+   g.turn=0;g.st="apunta";g.nTurn=0;g.place=null;d.aimInit(g);if(!g.fast){SFX.menu&&SFX.menu();}},
+ aimInit(g){const T=CHP.T,c=g.cs[g.turn],j=(c.pi+Math.round(20/T.sp))%CHP.N;g.aim={a:Math.atan2(T.c[j][1]-c.y,T.c[j][0]-c.x),p:0};g.drag=null;
+   if(!g.cs[g.turn].me||g.auto){g.st="piensa";g.thinkT=g.fast?0:.55;}else g.st="apunta";},
+ shoot(g,a,p){const c=g.cs[g.turn],sk=c.me&&!g.auto?{a:(.008+.03*p*p)*(1.25-c.tir/99*.5),p:.04*p}:c.sk;
+   const aa=a+gauss()*sk.a,pp=clamp(p*(1+gauss()*sk.p),.03,1),v=pp*CHP.vmax;
+   g.cs.forEach(o=>{o.path=0;o.hit=false;});c.vx=Math.cos(aa)*v;c.vy=Math.sin(aa)*v;g.st="rueda";g.spd=1;g.clack=0;if(!g.fast){noise(.03,.08);tone(1500,.03,"square",.03);}},
+ btn(g,id){const d=FERIA.G.chapas;if(id==="empieza"&&g.st==="intro")return d.start(g);if(id==="otra"&&g.st==="fin"){g.st="intro";g.cs=null;return;}if(id==="tira"&&g.st==="apunta"&&g.aim.p>.03)d.shoot(g,g.aim.a,g.aim.p);},
+ key(g,k){const d=FERIA.G.chapas;if(g.st==="intro"&&(k===" "||k==="Enter"))return d.start(g);if(g.st==="fin"&&(k===" "||k==="Enter"))return d.btn(g,"otra");
+   if(g.st==="rueda"){g.spd=3;return;}if(g.st!=="apunta")return;const A=g.aim;
+   if(k==="ArrowLeft"||k==="a")A.a-=.07;else if(k==="ArrowRight"||k==="d")A.a+=.07;else if(k==="ArrowUp"||k==="w")A.p=clamp(A.p+.05,0,1);else if(k==="ArrowDown"||k==="s")A.p=clamp(A.p-.05,0,1);
+   else if((k===" "||k==="Enter")&&A.p>.03)d.shoot(g,A.a,A.p);},
+ // Arrastrar hacia atrás desde cualquier punto: dirección contraria al arrastre, fuerza según la distancia
+ dn(g,x,y){if(g.st==="rueda"){g.spd=3;return;}if(g.st==="apunta")g.drag={x,y,a0:g.aim.a,p0:g.aim.p};},
+ mv(g,x,y){if(g.st!=="apunta"||!g.drag||!g.view)return;const v=g.view,dx=g.drag.x-x,dy=g.drag.y-y,[wx,wy]=v.vec(dx,dy),l=Math.hypot(wx,wy);
+   if(l*v.sc<4)return;g.aim.a=Math.atan2(wy,wx);g.aim.p=clamp(l/22,0,1);},
+ pu(g){const d=FERIA.G.chapas;if(g.st==="apunta"&&g.drag){const moved=g.aim.p!==g.drag.p0||g.aim.a!==g.drag.a0;g.drag=null;if(moved&&g.aim.p>.03)d.shoot(g,g.aim.a,g.aim.p);}},
+ up(g,dt){const d=FERIA.G.chapas,T=CHP.T;g.t+=dt;if(g.msg&&(g.msg.t-=dt)<=0)g.msg=null;
+   if(g.st==="piensa"){if((g.thinkT-=dt)<=0){const[a,p]=chpAi(g,g.turn);d.shoot(g,a,p);}return;}
+   if(g.st==="rueda"){const n=Math.ceil(dt*g.spd*120);for(let k=0;k<n;k++){const hit=chpStep(g.cs,T,1/120);if(hit>3&&!g.fast&&g.clack<=0){tone(2200+rnd()*600,.03,"square",.05);noise(.02,.06);g.clack=.08;if(hit>12)g.msg={s:"¡Carambola!",c:"#f5d142",t:.9};}}
+     g.clack-=dt;if(g.cs.every(c=>!c.vx&&!c.vy)){const ev=chpSettle(g.cs,T);ev.forEach(([c,s])=>{g.msg={s:`${s} ${c.me?"Vuelves a tu sitio":c.name+" vuelve"}`,c:c.me?"#e0552b":"#efe3c8",t:1.6};});
+       if(ev.some(e=>e[0].me)&&!g.fast)sfx("mal");
+       const win=g.cs.find(c=>c.prog>=CHP.N);if(win){d.finish(g,win);return;}
+       g.turn=(g.turn+1)%g.cs.length;g.nTurn++;if(g.nTurn>400){d.finish(g,null);return;}d.aimInit(g);}}},
+ finish(g,win){g.st="fin";const ord=g.cs.slice().sort((a,b)=>b.prog-a.prog);g.ord=ord;const me=ord.findIndex(c=>c.me);g.place=me;
+   if(!g.fast){win&&win.me?SFX.gol():sfx("mal");}
+   if(!g.auto){const pr=CHP.pr[me];if(pr){feriaGain(pr);g.prizes.push(`${me+1}º en la Vuelta de chapas: +${pr} fichas.`);}
+     if(me===0&&g.cs.find(c=>c.me).outs===0)g.prizes.push(feriaCre("n"));save();}},
+ dr(g){const d=FERIA.G.chapas,T=chpTrack(),port=H>W,top=SAFE.t+(port?56:28),bot=H-SAFE.b-(port?44:40),bw=port?60:100,bh=port?100:60;
+   const sc=Math.min((W-SAFE.l-SAFE.r-12)/bw,(bot-top)/bh),ox=Math.round(W/2-bw*sc/2),oy=Math.round(top+(bot-top-bh*sc)/2);
+   const S2=(x,y)=>port?[ox+(60-y)*sc,oy+x*sc]:[ox+x*sc,oy+y*sc];
+   g.view={sc,vec:(dx,dy)=>port?[dy/sc,-dx/sc]:[dx/sc,dy/sc]};
+   // baldosa de Bilbao: florón de cuatro pétalos en relieve, en patrón
+   const tp=Math.max(8,Math.round(8*sc));if(!d.pat||d.patS!==tp){const o=document.createElement("canvas");o.width=o.height=tp;const q=o.getContext("2d");q.fillStyle="#b9b4a8";q.fillRect(0,0,tp,tp);
+     q.fillStyle="#a9a397";const m=tp/2,r=tp*.16;for(const[ax,ay]of[[0,-1],[1,0],[0,1],[-1,0]]){q.beginPath();q.ellipse(m+ax*r*1.25,m+ay*r*1.25,ax?r*1.2:r*.6,ay?r*1.2:r*.6,0,0,7);q.fill();}
+     q.fillStyle="#c9c4b8";q.beginPath();q.arc(m,m,r*.55,0,7);q.fill();for(const[cx,cy]of[[0,0],[tp,0],[0,tp],[tp,tp]]){q.fillStyle="#a9a397";q.beginPath();q.arc(cx,cy,r*.9,0,7);q.fill();}
+     q.fillStyle="rgba(0,0,0,.18)";q.fillRect(0,tp-1,tp,1);q.fillRect(tp-1,0,1,tp);q.fillStyle="rgba(255,255,255,.12)";q.fillRect(0,0,tp,1);d.pat=ctx.createPattern(o,"repeat");d.patS=tp;}
+   ctx.fillStyle=d.pat;ctx.save();ctx.translate(ox%tp,oy%tp);ctx.fillRect(-tp,-tp,W+2*tp,H+2*tp);ctx.restore();
+   // bordillo y luz de tarde
+   const gr=ctx.createLinearGradient(0,0,W,H);gr.addColorStop(0,"rgba(255,230,180,.12)");gr.addColorStop(1,"rgba(30,20,40,.18)");ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+   // circuito de tiza: dos rayas con trazo irregular
+   const N=CHP.N,edge=s=>T.c.map((q,i)=>S2(q[0]+T.n[i][0]*T.w[i]/2*s,q[1]+T.n[i][1]*T.w[i]/2*s));
+   ctx.fillStyle="rgba(255,255,255,.05)";ctx.beginPath();edge(1).forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();edge(-1).reverse().forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill("evenodd");
+   for(const s of[1,-1])for(const[al,lw,j]of[[.85,Math.max(1,sc*.35),0],[.35,Math.max(1,sc*.2),.6]]){const r=srand(s>0?3:7);ctx.strokeStyle=`rgba(250,250,245,${al})`;ctx.lineWidth=lw;ctx.beginPath();
+     edge(s).forEach((p,i)=>{const jx=(r()-.5)*j*sc*.4,jy=(r()-.5)*j*sc*.4;i?ctx.lineTo(p[0]+jx,p[1]+jy):ctx.moveTo(p[0]+jx,p[1]+jy);});ctx.closePath();ctx.stroke();}
+   // salida y meta a cuadros
+   {const q=T.c[0],nn=T.n[0],w0=T.w[0],k=6;for(let a=0;a<k;a++)for(let b=0;b<2;b++){const s0=-w0/2+a*w0/k,tx=-nn[1],ty=nn[0];const pts=[[s0,b],[s0+w0/k,b],[s0+w0/k,b+1],[s0,b+1]].map(([u,v])=>S2(q[0]+nn[0]*u+tx*(v-1)*.9,q[1]+nn[1]*u+ty*(v-1)*.9));
+       ctx.fillStyle=(a+b)%2?"rgba(250,250,245,.85)":"rgba(40,40,40,.55)";ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.fill();}
+     const[lx,ly]=S2(q[0]+nn[0]*(w0/2+3),q[1]+nn[1]*(w0/2+3));txt("META",lx,ly,"rgba(250,250,245,.9)",Math.max(5,sc*1.6),"center","none",8);}
+   // flechas de tiza
+   for(const f of[.12,.42,.62,.9]){const i=Math.round(N*f),q=T.c[i],b=T.c[(i+4)%N],[x1,y1]=S2(q[0],q[1]),[x2,y2]=S2(b[0],b[1]),a=Math.atan2(y2-y1,x2-x1),l=sc*2;ctx.strokeStyle="rgba(250,250,245,.35)";ctx.lineWidth=Math.max(1,sc*.25);
+     ctx.beginPath();ctx.moveTo(x1-Math.cos(a)*l,y1-Math.sin(a)*l);ctx.lineTo(x1+Math.cos(a)*l,y1+Math.sin(a)*l);ctx.lineTo(x1+Math.cos(a+2.5)*l*.6+Math.cos(a)*l,y1+Math.sin(a+2.5)*l*.6+Math.sin(a)*l);ctx.moveTo(x1+Math.cos(a)*l,y1+Math.sin(a)*l);ctx.lineTo(x1+Math.cos(a-2.5)*l*.6+Math.cos(a)*l,y1+Math.sin(a-2.5)*l*.6+Math.sin(a)*l);ctx.stroke();}
+   // sumidero y charco
+   {const dr=T.drain,[x,y]=S2(dr.x,dr.y),r=dr.r*sc;fR("#4a4740",x-r,y-r,2*r,2*r);fR("#26241f",x-r+1,y-r+1,2*r-2,2*r-2);for(let k=-r+3;k<r-2;k+=Math.max(2,sc*.6))fR("#57534a",port?x-r+2:x+k,port?y+k:y-r+2,port?2*r-4:Math.max(1,sc*.25),port?Math.max(1,sc*.25):2*r-4);}
+   {const pd=T.puddle,[x,y]=S2(pd.x,pd.y);ctx.fillStyle="rgba(70,110,150,.45)";ctx.beginPath();ctx.ellipse(x,y,(port?pd.ry:pd.rx)*sc,(port?pd.rx:pd.ry)*sc,0,0,7);ctx.fill();ctx.fillStyle="rgba(220,240,255,.35)";ctx.beginPath();ctx.ellipse(x-sc,y-sc*.6,sc*1.2,sc*.4,-.4,0,7);ctx.fill();}
+   if(!g.cs){bigTxt("VUELTA DE CHAPAS",W/2,H*.4,"#f5c030",12,16);txt(feriaSt().free>0?"Hoy la primera va gratis":`Entrada: ${CHP.cost} fichas`,W/2,H*.4+18,"#efe3c8",6,"center",null,9);
+     fBtn("empieza",W/2-60,H*.4+30,120,26,"¡A LA SALIDA!",{col:"#2f8a3a",key:"Enter"});return;}
+   // guía: solo el primer tramo del recorrido, sin rebotes
+   const cur=g.cs[g.turn];if(g.st==="apunta"&&g.aim.p>0){const A=g.aim,dist=(A.p*CHP.vmax)**2/(2*CHP.mu),sh=dist*.38,[x0,y0]=S2(cur.x,cur.y);
+     for(let s=CHP.R*1.4;s<sh;s+=1.2){const[x,y]=S2(cur.x+Math.cos(A.a)*s,cur.y+Math.sin(A.a)*s);fR(`rgba(255,255,255,${.9*(1-s/sh)})`,x-1,y-1,2,2);}
+     const[bx,by]=S2(cur.x-Math.cos(A.a)*(CHP.R+1+A.p*4),cur.y-Math.sin(A.a)*(CHP.R+1+A.p*4));ctx.strokeStyle=A.p>.8?"#e0552b":"#f5d142";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(bx,by);ctx.stroke();}
+   // chapas: sombra, corona dentada, color del barrio y criatura dentro
+   g.cs.slice().sort((a,b)=>a.y-b.y).forEach((c,i)=>{const[x,y]=S2(c.x,c.y),r=CHP.R*sc,turn=c===cur&&(g.st==="apunta"||g.st==="piensa");
+     ctx.fillStyle="rgba(0,0,0,.3)";ctx.beginPath();ctx.arc(x+r*.25,y+r*.3,r*1.05,0,7);ctx.fill();
+     ctx.fillStyle="#3a372f";ctx.beginPath();ctx.arc(x,y,r*1.1,0,7);ctx.fill();ctx.fillStyle="#e2dccb";ctx.beginPath();for(let k=0;k<42;k++){const a=k/42*6.2832,rr=k%2?r*1.04:r*.92;ctx.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);}ctx.fill();
+     ctx.fillStyle=c.col;ctx.beginPath();ctx.arc(x,y,r*.8,0,7);ctx.fill();const z=Math.round(r*1.5);ctx.drawImage(creImg(c.c,32,0),Math.round(x-z/2),Math.round(y-z/2),z,z);
+     ctx.strokeStyle="rgba(255,255,255,.45)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,r*.85,3.6,5.2);ctx.stroke();
+     if(turn){ctx.strokeStyle=c.me?"#7cc0ff":"#f5d142";ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,r*1.35+Math.sin(g.t*6)*1.2,0,7);ctx.stroke();}});
+   // clasificación
+   const ord=g.cs.slice().sort((a,b)=>b.prog-a.prog),lx=port?SAFE.l+6:SAFE.l+6,ly=port?SAFE.t+28:top+4;
+   ord.forEach((c,i)=>{const x=port?lx+(i%2)*((W-12)/2):lx,y=port?ly+(i>>1)*12:ly+i*12,pc=clamp(Math.round(c.prog/CHP.N*100),0,100);fR("rgba(13,10,18,.6)",x,y,port?(W-16)/2:96,11);fR(c.col,x+1,y+1,3,9);
+     txt(`${i+1}º ${c.me?"TÚ":c.name}`,x+7,y+8,c.me?"#7cc0ff":"#efe3c8",4,"left","none",7);txt(`${pc}%`,x+(port?(W-16)/2:96)-3,y+8,"#c9c0a8",4,"right","none",7);});
+   const who=cur.me?"Tu tiro":`Tira ${cur.name}`;txt(g.st==="fin"?"":who,W/2,SAFE.t+12,cur.me?"#7cc0ff":"#efe3c8",7,"center",null,10);
+   if(g.st==="apunta"){txt(TOUCH?"Arrastra hacia atrás y suelta":"Arrastra hacia atrás y suelta · o flechas y espacio",W/2,bot+12,"#efe3c8",5,"center",null,8);
+     const pw=Math.min(120,W*.4);fR("#1d1b26",W/2-pw/2,bot+18,pw,7);fR(g.aim.p>.8?"#e0552b":"#f5d142",W/2-pw/2+1,bot+19,(pw-2)*g.aim.p,5);
+     if(!TOUCH)fBtn("tira",W/2+pw/2+6,bot+15,50,14,"TIRA",{col:"#2f8a3a",off:g.aim.p<=.03});}
+   if(g.st==="rueda"&&!cur.me)txt("Toca para acelerar",W/2,bot+12,"#9a8f78",5,"center",null,8);
+   if(g.msg)bigTxt(g.msg.s,W/2,H*.5,g.msg.c,8,11);
+   if(g.st==="fin"){fR("rgba(13,10,18,.85)",W/2-110,H*.25,220,96);bigTxt(g.place===0?"¡GANAS LA VUELTA!":`Llegas ${g.place+1}º`,W/2,H*.25+20,g.place===0?"#f5d142":"#efe3c8",11,15);
+     g.ord.forEach((c,i)=>txt(`${i+1}º ${c.me?"Tú":c.name}${c.outs?` · ${c.outs} salida${c.outs>1?"s":""}`:""}`,W/2,H*.25+38+i*11,c.me?"#7cc0ff":"#efe3c8",5,"center","none",8));
+     fBtn("otra",W/2-70,H*.25+100,140,24,"OTRA VUELTA",{col:"#2f8a3a",key:"Enter"});}}};
+FERIA.order.push("chapas");
 $("bSnd").textContent=AU.on?"♪":"✕♪";
 window.G={get E(){return E;},get ROAM(){return ROAM;},get MG2(){return MG2;},get W(){return W;},get H(){return H;},get F(){return{FX0,FX1,FY0,FY1,GCX,MIDY};},get S(){return S;},get M(){return M;},get scene(){return scene;},set HALF(v){HALF=v;},P,DATA,newGame,startMatchFlow,zoneTeam,buildTeam,newCre,addCre,say,testAct,startRecruit};
 // Los sprites PixelLab se decodifican antes del primer dibujo (formImg, human e itemImg los usan de forma síncrona y cachean).
