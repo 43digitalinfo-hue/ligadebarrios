@@ -80,6 +80,14 @@ Arreglos que salieron al probar:
 - **Joystick más fino:** zona muerta más pequeña, a media carrera ya vas a tope, y si arrastras más allá del borde la base sigue al dedo, así que no hay que volver atrás para cambiar de dirección.
 - **Vibración** (Android; iOS no la permite): al coger el joystick, al llegar al borde, en pases, tiros, goles, entradas ganadas o perdidas, postes, supertécnicas y botones del partido. En los minijuegos vibra con cada golpe o fallo. Se activa o desactiva en el título, en el Menú y en la Pausa ("Vibración: sí/no").
 
+## Quinta tanda: entrenamientos, partido más lejos, supertécnicas y rendimiento (móvil)
+
+- **Entrenamientos como minijuegos de 3 intentos:** penaltis (eliges lado y paras la barra de potencia; en la zona verde es gol salvo que el portero adivine, y a la escuadra entra siempre), regate (amagas y sales por el lado libre a tiempo) y paradas (el rival mira a un lado, a veces de farol; si te lanzas antes de tiempo, cambia de lado). Juegas con tu propia criatura y sus estadísticas influyen. 3 aciertos = oro, 2 = plata, 1 = bronce, 0 = nada y 0 de experiencia. La dificultad sube con el nivel. Se ha quitado el entrenamiento antiguo.
+- **Partido más lejos en el móvil:** la cámara del partido se aleja (más campo, jugadores más pequeños); la pantalla de tiro vuelve a acercarse para verla bien.
+- **Supertécnicas con más detalle:** presentación con rayos giratorios, franja diagonal, la criatura entrando con contorno de color, partículas de energía y cartel con el nombre y estrellas por nivel. En la ejecución: viñeta del color de la técnica, estela del balón, ondas expansivas, sacudida y vibración; en el resultado, estallido de rayos.
+- **Rendimiento:** el mapa se pinta por bloques ya dibujados (solo se redibujan las baldosas animadas); la capa de texto solo borra la zona usada; el postproceso reutiliza memoria. Si el móvil va por debajo de ~25 fps durante 3 s en el mapa o el partido, se desactiva solo el postproceso ("Modo fluido"). Con la CPU frenada ×4, el mapa pasa de 8,7 a 18,5 fps y el partido de 12 a 28 fps.
+- **Prealineación en horizontal:** tarjetas más compactas; los cinco titulares caben sin desplazar.
+
 ## Detectado pero sin cambiar: decides tú
 
 - **Balance:** simulé 200 partidos IA contra IA y salen 3,35 goles y 15,6 tiros por partido. El comentario de `BALANCE` dice que está calibrado en unos 2,6 goles y 13 tiros, con un objetivo de 2-3 goles. Para volver a ese rango, se podría bajar `shot.base` de 28 a unos 24 y volver a simular (Modo prueba → "Simular 50 partidos").
@@ -106,5 +114,7 @@ Arreglos que salieron al probar:
 - Con la ventana a 0×0 ya no hay errores.
 
 - Tercera tanda: carga sin errores con y sin `?debug`; 100 partidos simulados (3,98 goles y 12,4 tiros de media); los 24 minijuegos jugados hasta el final en tres dificultades con toques aleatorios, sin errores; atasco resuelto con arrastre; pruebas de interfaz de frontón (7), chapas (6) y sokatira (6) superadas en escritorio y móvil.
+
+- Quinta tanda: carga sin errores; joystick, flujo de partida nueva en móvil, partido táctil, minijuegos (incluidos los 3 entrenamientos en tres dificultades), feria en móvil y escritorio, frontón, chapas y sokatira superados sin errores.
 
 No he hecho una partida humana completa de principio a fin, ni he probado en un móvil real.

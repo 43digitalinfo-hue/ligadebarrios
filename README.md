@@ -12,7 +12,11 @@ En el móvil, el partido se juega con un joystick flotante en la mitad izquierda
 
 - `?debug`: activa el Modo prueba (toca 5 veces el título) y expone `window.G` para depurar. Sin este parámetro no están disponibles.
 - `?hora=N`: fuerza la hora del día (0-23) para probar la luz, el cielo y los focos.
-- `?nofx`: desactiva el postproceso WebGL.
+- `?nofx`: desactiva el postproceso WebGL. En móviles lentos se desactiva solo ("Modo fluido").
+
+## Entrenamientos
+
+Cada entrenamiento (penaltis, regate o paradas) son 3 intentos con tu criatura: 3 aciertos = oro, 2 = plata, 1 = bronce y 0 = sin experiencia.
 
 ## La Feria
 
