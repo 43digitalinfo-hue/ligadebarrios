@@ -41,8 +41,10 @@ button.on{background:var(--rust)}
 #mpad img{width:70%;height:70%;image-rendering:pixelated;pointer-events:none}
 #mpad button.on{opacity:.95;transform:translateY(2px)}#mpad button.off{filter:grayscale(1);opacity:.35}
 #mS{right:calc(var(--sr) + 16px);bottom:calc(var(--sb) + 62px);width:76px;height:76px;background:var(--rust)}
+#mS[data-q=g]{outline:4px solid #7cc050;outline-offset:2px;opacity:.9}#mS[data-q=y]{outline:4px solid #f5d142;outline-offset:2px;opacity:.85}#mS[data-q=r]{outline:3px solid #e0552b;outline-offset:2px}
 #mP{right:calc(var(--sr) + 100px);bottom:calc(var(--sb) + 18px);width:64px;height:64px;background:#2e6f9e}
 #mX{right:calc(var(--sr) + 22px);bottom:calc(var(--sb) + 152px);width:52px;height:52px;background:#7b4fa0;font-size:22px!important}
+@media (orientation:landscape){#mP{right:calc(var(--sr) + 22px);bottom:calc(var(--sb) + 12px)}#mS{bottom:calc(var(--sb) + 88px)}#mX{bottom:calc(var(--sb) + 178px)}}
 #dlg{position:absolute;left:calc(var(--sl) + 8px);right:calc(var(--sr) + 8px);bottom:calc(var(--sb) + 10px);z-index:6;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:8px;box-shadow:inset 0 0 0 2px #fff8,inset 0 -4px 0 #c9b98f,0 0 0 3px var(--paper),0 0 0 6px var(--ink);padding:10px 12px 12px;font-size:17px;line-height:1.3;min-height:74px;animation:up .15s}
 #dlgC{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 #dlgC .more{position:absolute;right:10px;bottom:4px;color:var(--rust);animation:b .8s steps(2) infinite}
@@ -1462,7 +1464,7 @@ function postFx(o){if(NOFX||PERF.low)return;const P=Object.assign(postParams(),{
 const ROOM=1.15; // más espacio en el partido: las distancias del juego se miden como en un campo un 15 % mayor
 let ADSPS=[],BOARDS=[],FX0=0,FX1=160,FY0=0,FY1=184,FL=184,FW=160,GX0=62,GX1=98,GCX=80,MIDY=92,SPF=1,PITCH=null,CROWD=null;
 let HOR=false,ZM=1,MW=176,MH=208,PX0=8,PY0=20;
-let HALF=45,M=null; // DECISIÓN: 2 tiempos de 45 s reales (antes 100): partidos cortos y con ritmo; el reloj muestra 0'-40'.
+let HALF=60,M=null; // DECISIÓN: 2 tiempos de 45 s reales (antes 100): partidos cortos y con ritmo; el reloj muestra 0'-40'.
 const V=(x,y)=>HOR?[PX0+FL-y,PY0+x]:[PX0+x,PY0+y],Vinv=(vx,vy)=>HOR?[vy-PY0,FL-(vx-PX0)]:[vx-PX0,vy-PY0];
 const dirV2S=(dx,dy)=>HOR?[dy,-dx]:[dx,dy],dirS2V=(dx,dy)=>HOR?[-dy,dx]:[dx,dy];
 const TOUCH=(window.matchMedia&&matchMedia("(pointer: coarse)").matches)||"ontouchstart" in window;
@@ -1529,7 +1531,9 @@ function layoutField(){
   // en el móvil el tamaño ya lo fija resize() (píxeles físicos): sin zoom extra
   ZM=MSC&&TOUCH&&(window.devicePixelRatio||1)>=1.5?1:Math.max(1,Math.floor(Math.min(W,H)/(TOUCH?170:200)));MW=Math.floor(W/ZM);MH=Math.floor(H/ZM);HOR=MW>MH*1.15;
   const st=Math.ceil(SAFE.t/ZM),sb=Math.ceil(SAFE.b/ZM),sl=Math.ceil(SAFE.l/ZM),sr=Math.ceil(SAFE.r/ZM);BIG=HOR&&MH>=250;SKY=BIG?30:MH>=200?16:0; // en pantallas pequeñas, franja más baja del cielo (recortada, sin deformar)
-  if(HOR){const top=st+(BIG?54:31),bot=sb+(BIG?34:23);FW=Math.max(60,MH-top-bot);FL=Math.floor(Math.min(MW-sl-sr-(BIG?40:28),FW*2.35));PX0=Math.floor(sl+(MW-sl-sr-FL)/2);PY0=top+Math.floor((MH-top-bot-FW)/2);} // DECISIÓN: márgenes algo menores, campo más grande
+  if(HOR){const top=st+(BIG?54:31),bot=sb+(BIG?34:23);FW=Math.max(60,MH-top-bot);
+    const bw=MSC&&TOUCH?Math.ceil(100/(SCALE*ZM)):0; // en el móvil, la columna de botones queda a la derecha, fuera del campo (antes tapaba la portería rival)
+    if(bw){FL=Math.floor(Math.min(MW-sl-sr-20-bw,FW*2.35));PX0=Math.floor(sl+20+(MW-sl-sr-20-bw-FL)/2);}else{FL=Math.floor(Math.min(MW-sl-sr-(BIG?40:28),FW*2.35));PX0=Math.floor(sl+(MW-sl-sr-FL)/2);}PY0=top+Math.floor((MH-top-bot-FW)/2);} // DECISIÓN: márgenes algo menores, campo más grande
   else{const top=st+46,bot=sb+36;FL=MH-top-bot;FW=Math.floor(Math.min(MW-22,FL*.62));PX0=Math.floor((MW-FW)/2);PY0=top;}
   FX0=0;FX1=FW;FY0=0;FY1=FL;GCX=Math.round(FW/2);const gw=Math.round(FW*.23);GX0=GCX-(gw>>1);GX1=GX0+gw;MIDY=Math.round(FL/2);SPF=clamp(FL/(184*ROOM),1,4);PS=TOUCH?24:FW>=220?32:24;
   buildPitch();PITCH.w0=W;PITCH.h0=H;if(M)buildCrowd(M.kit);
@@ -1715,8 +1719,8 @@ function support(ti,list){
 function defend(ti,field,D,noPress){
   const B=M.ball,c=B.owner,gy=ownY(ti),bx=B.x,by=B.y;let rest=field.slice();
   field.forEach(p=>{p.rec=(p.y-by)*fdir(ti)>6*SPF;});
-  if(c&&!noPress){const n=D.press>1&&Math.abs(c.y-gy)<FL/2?2:1;
-    rest.slice().sort((a,b)=>dist(a.x,a.y,c.x,c.y)-dist(b.x,b.y,c.x,c.y)).slice(0,n).forEach(p=>{if(dist(p.x,p.y,c.x,c.y)>D.pressR*SPF)return;
+  if(c&&!noPress){const inA=inArea(c.x,c.y,gy),n=inA||D.press>1&&Math.abs(c.y-gy)<FL/2?2:1; // DECISIÓN: dentro de su área siempre presionan dos (el portero ya no sale)
+    rest.slice().sort((a,b)=>dist(a.x,a.y,c.x,c.y)-dist(b.x,b.y,c.x,c.y)).slice(0,n).forEach(p=>{if(!inA&&dist(p.x,p.y,c.x,c.y)>D.pressR*SPF)return;
       const d=dist(c.x,c.y,GCX,gy)||1,gs=[c.x+(GCX-c.x)/d*5*SPF,c.y+(gy-c.y)/d*5*SPF],h=homePos(p);p.goal=[h[0]+(gs[0]-h[0])*D.pressAgg,h[1]+(gs[1]-h[1])*D.pressAgg];rest=rest.filter(q=>q!==p);});}
   if(B.pass&&B.pass.from.ti!==ti){let bd=30*SPF,cut=null;rest.forEach(p=>{const d=segDist(p.x,p.y,bx,by,B.pass.tx,B.pass.ty);if(d<bd){bd=d;cut=p;}});
     if(cut){const Q=B.pass,dx=Q.tx-bx,dy=Q.ty-by,l=dx*dx+dy*dy||1,t=clamp(((cut.x-bx)*dx+(cut.y-by)*dy)/l,0,1);cut.goal=[bx+dx*t,by+dy*t];rest=rest.filter(q=>q!==cut);}}
@@ -1868,6 +1872,8 @@ function startShot(sh,sup){
   if(M.sim){SH.tT=aiTech(sh,techOpts(sh,"tiro"),"tiro",SH);SH.bT=aiTech(SH.blk,techOpts(SH.blk,"bloqueo"),"bloqueo",SH);SH.kT=aiTech(SH.keeper,techOpts(SH.keeper,"parada"),"parada",SH);spendTech(SH);return applyShot(SH,rollShot(SH));}
   if(sh.ti===0){SH.sup=!!sup;M.state="shot";return shotCinema(SH,res=>applyShot(SH,res,1));}
   const t=aiTech(sh,techOpts(sh,"tiro"),"tiro",SH);if(t){SH.tT=t;SH.aiPre=1;M.state="shot";return shotCinema(SH,res=>applyShot(SH,res,1));}
+  // DECISIÓN: si tu portero puede pagar una supertécnica y el tiro viene de cerca, eliges tú la parada (antes solo si el rival usaba técnica)
+  const kp=SH.keeper;if(sh.ti===1&&kp&&(SH.inArea||SH.d<FL*.3)&&(techOpts(kp,"parada").length||comboOpts(kp,"parada").length)){SH.aiPre=1;M.state="shot";return shotCinema(SH,res=>applyShot(SH,res,1));}
   fieldShot(SH);
 }
 function fieldShot(SH){
@@ -2070,6 +2076,8 @@ function drawAim(c){
   const d=(12+6*5)*s+4,ex=x+dx*d,ey=y-6*s+dy*d,px=-dy,py=dx;
   for(let i=0;i<5;i++){P("rgba(29,27,38,.75)",ex-dx*i+px*i-2,ey-dy*i+py*i-2,4);P("rgba(29,27,38,.75)",ex-dx*i-px*i-2,ey-dy*i-py*i-2,4);}
   for(let i=0;i<5;i++){P(col,ex-dx*i+px*i-1,ey-dy*i+py*i-1,2);P(col,ex-dx*i-px*i-1,ey-dy*i-py*i-1,2);}
+  // a quién va el pase: aro bajo el receptor
+  if(c.s!==0){const m=passTgt(c,nrm(a));if(m){const[mx,my]=V(m.x,m.y),r=Math.round(PS*.62)+((frame>>3)%2);ringAt(mx,my,r,"rgba(29,27,38,.65)",4);ringAt(mx,my,r,"#f5d142",2);}}
 }
 // Las vallas cambian de patrocinador cada 6 s con un barrido de izquierda a derecha (el rótulo aparece al terminar).
 function drawBoards(t,Z){
@@ -2094,13 +2102,18 @@ function matchDraw(){
   const [bx,by]=V(B.x,B.y),L=M.pl.map(p=>{const[x,y]=V(p.x,p.y);return[p,x,y];});L.push([null,bx,by+.5]);L.sort((a,b)=>a[2]-b[2]);
   if(M.trail.length){M.trail=M.trail.slice(-12);const n=M.trail.length,fl=M.state==="flight"||Math.hypot(B.vx,B.vy)>80;M.trail.forEach(([x,y,z],i)=>{const[a,b]=V(x,y),k=i/n,s=1+k*(fl?3:2)|0;ctx.fillStyle=fl?`rgba(255,236,160,${k*.75})`:`rgba(255,255,255,${k*.5})`;ctx.fillRect(Math.round(a-s/2),Math.round(b-(z||0)-1-s/2),s,s);});if(!B.pass&&M.state!=="flight")M.trail.shift();}
   if(mine)drawAim(c);
+  else if(c&&c.ti===1&&!M.sim&&M.state==="play"&&M.ctrl&&M.ctrl.ti===0){const me=M.ctrl,reach=pSpeed(me)*1.9*.35*.85+Math.max(9,5*SPF+3);
+    if(dist(me.x,me.y,c.x,c.y)<reach&&me.dcd<=0){const[x,y]=V(c.x,c.y),r=Math.round(PS*.62)+((frame>>2)%2);ringAt(x,y,r,"rgba(29,27,38,.65)",4);ringAt(x,y,r,"#ff6a3a",2);}}
   const LS=lightsNow();L.forEach(([p,x,y])=>{if(!p)return;const fr=p.mvT>0?0:(Math.floor(frame/32+p.s*.37)%2),img=kitImg(p.c,PS,fr,M.kit[p.ti]),flip=(p.fx||(p.ti?-1:1))<0,hf=PS/2,top=Math.round(PS*.875);
     LS.forEach(({sv,a})=>castShadow(img,x,y,-hf,-top,flip,sv,a*(p.stun>0?.6:1)));}); // sombras primero: nunca tapan a otro jugador
   L.forEach(([p,x,y])=>p?drawPl(p,x,y):drawBall(x,y,B.z||0,B.rot));
   vfxDraw(M.fx);partsDraw();
   // Marca del que controlas, textos flotantes y aviso de tiro
   const me=M.ctrl,s=PS/24;if(me&&me.ti===0&&M.state!=="intro"&&M.state!=="goal"){const[x,y]=V(me.x,me.y),b=(frame>>3)%2,t=Math.round(y-31*s-b);ctx.fillStyle="#1d1b26";ctx.fillRect(x-3,t,7,4);ctx.fillStyle="#f5d142";ctx.fillRect(x-2,t,5,1);ctx.fillRect(x-1,t+1,3,1);ctx.fillRect(x,t+2,1,1);}
-  if(canS){const[x,y]=V(GCX,FL*.1);txt(TOUCH?"¡TIRO!":"S ¡TIRA!",x,y,(frame>>3)%2?"#f5d142":"#fff",6*Z,"center",null,11);}
+  if(canS){if(frame%8===0||M.sq==null)M.sq=clamp(Math.round(shotPct(mkShot(c),false)),3,85);const q=M.sq,qc=q>=40?"#7cc050":q>=25?"#f5d142":"#e0552b";
+    const[x,y]=V(GCX,FL*.1);txt(`${TOUCH?"¡TIRO!":"S ¡TIRA!"} ~${q}%`,x,y,(frame>>3)%2?qc:"#fff",6*Z,"center",null,11);}
+  else M.sq=null;
+  {const b=TOUCH&&$("mS"),qv=M.sq==null?"":M.sq>=40?"g":M.sq>=25?"y":"r";if(b&&b.dataset.q!==qv)b.dataset.q=qv;}
   M.pops.forEach(p=>{const[x,y]=V(p.x,p.y);txt(p.s,x,y-26*s-(1.2-p.t)*10,p.c,6*Z,"center",null,11);});
   ctx.restore();ctx.setTransform(1,0,0,1,0,0);postFx();drawFloods();drawRainOver();drawHUD();
 }
@@ -2190,9 +2203,15 @@ function matchAct(a,aim){
   kickBall(c,dir);
 }
 // Pase hacia donde apuntas: al compañero que esté en esa dirección (con ventaja) o, si no hay nadie, al espacio.
+// DECISIÓN: margen de ±55° (antes ±37°: con el pulgar era fácil no acertar y el balón iba al hueco y se perdía) y se evita la línea tapada.
+function passTgt(c,dir){
+  let best=null,bs=-9;const opp=M.pl.filter(q=>q.ti!==c.ti&&q.s!==0);
+  M.pl.forEach(m=>{if(m.ti!==c.ti||m===c||m.s===0)return;const dx=m.x-c.x,dy=m.y-c.y,d=Math.hypot(dx,dy)||1,cos=(dx*dir[0]+dy*dir[1])/d;if(cos<.57)return;
+    const blk=opp.some(q=>segDist(q.x,q.y,c.x,c.y,m.x,m.y)<7*SPF),sc=cos*2-d/(260*SPF)-(blk?.6:0);if(sc>bs){bs=sc;best=m;}});
+  return best;
+}
 function userPass(c,dir){
-  let best=null,bs=-9;
-  M.pl.forEach(m=>{if(m.ti!==0||m===c||m.s===0)return;const dx=m.x-c.x,dy=m.y-c.y,d=Math.hypot(dx,dy)||1,cos=(dx*dir[0]+dy*dir[1])/d;if(cos<.8)return;const sc=cos*2-d/(260*SPF);if(sc>bs){bs=sc;best=m;}});
+  const best=passTgt(c,dir);
   if(!best){const L=70*SPF;return doPass(c,c.x+dir[0]*L,c.y+dir[1]*L);}
   const t=dist(c.x,c.y,best.x,best.y)/(BALANCE.pace.pass*SPF);doPass(c,best.x+(best.vx||0)*t*.8,best.y+(best.vy||0)*t*.8);
 }
@@ -3812,6 +3831,7 @@ cv.addEventListener("lostpointercapture",e=>{PTR.delete(e.pointerId);mUp(e);});
 // Botones táctiles estilo Brawl Stars: tocar = actuar hacia donde apunta el joystick; arrastrar desde el botón = apuntar a mano (se suelta y sale).
 [["mP","pass"],["mS","shoot"],["mX","super"]].forEach(([id,a])=>{const b=$(id);let st=null;
   b.addEventListener("pointerdown",e=>{e.preventDefault();auInit();b.classList.add("on");hap(10);if(!M||scene!=="match")return;if(!myBall()){matchAct(a);return;}
+    {const c=M.ball.owner;if(a!=="pass"&&c.s!==0&&dist(c.x,c.y,GCX,0)<=shotRange()){matchAct(a);return;}} // el tiro no necesita apuntar arrastrando: sale al pulsar
     try{b.setPointerCapture(e.pointerId);}catch(_){}st={x:e.clientX,y:e.clientY};});
   b.addEventListener("pointermove",e=>{if(!st||!M)return;const dx=e.clientX-st.x,dy=e.clientY-st.y;M.aimDrag=Math.hypot(dx,dy)>14?nrm(dirV2S(dx,dy)):null;});
   ["pointerup","pointercancel"].forEach(ev=>b.addEventListener(ev,()=>{b.classList.remove("on");if(!st)return;st=null;const aim=M&&M.aimDrag;if(M)M.aimDrag=null;if(ev==="pointerup")matchAct(a,aim||undefined);}));});

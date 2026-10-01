@@ -96,6 +96,18 @@ Arreglos que salieron al probar:
 - **Supertécnicas del portero y de los defensas:** al elegir la parada o el bloqueo se ve el % de parar con cada opción.
 - **Corte:** cuando un defensor tuyo llega a un rival con balón cerca de tu área, a veces salta una transición "¡CORTE IMPORTANTE!" o, muy cerca de la portería, "¡CORTE VALOR GOL!". Eliges entre la entrada normal y las supertécnicas de bloqueo (cada una con su %). Después se ve la animación de la técnica y "¡CORTE!" o "¡SE ESCAPA!". Pulsando ★ al ir a robar, el defensor con técnica fuerza el corte. Como mucho sale uno cada 20 s.
 
+## Séptima tanda: lo que salió al probar el partido en el móvil
+
+Probado con un jugador automático que usa el joystick y los botones táctiles (6 partidos antes de los cambios y 2 después).
+
+- **Botones fuera del campo (horizontal):** PASE, TIRO y ★ van en una columna a la derecha y el campo se desplaza a la izquierda. Antes tapaban la portería rival. El campo mide lo mismo en 844×390 y un 3 % menos en 740×360.
+- **Presión en el área:** dentro de su área siempre presionan dos defensas al que lleva el balón. Antes podías quedarte quieto en la línea de gol más de 9 s sin que nadie te entrase, porque el portero ya no sale.
+- **Eliges la parada más a menudo:** si tu portero puede pagar una supertécnica y el tiro rival viene de cerca, se abre su pantalla con el % de cada opción. Antes salía en 1 de cada 6 tiros rivales; ahora, en unos 7 por partido.
+- **Pase asistido:** el pase busca compañero con un margen de ±55° (antes ±37°) y evita las líneas tapadas. Un aro amarillo marca a quién va el pase mientras apuntas. Pases perdidos: de ~50-70 % a ~20-25 %.
+- **Entrada:** un aro naranja marca al rival con balón cuando está a tu alcance.
+- **Tiro:** el botón TIRO lleva un aro verde, amarillo o rojo según la calidad de la posición, y el aviso "¡TIRO!" muestra el % aproximado. Dentro de rango, el tiro sale al pulsar y no al soltar.
+- **Partes de 60 s** (antes 45): más jugadas ahora que el ritmo es más tranquilo. En 100 partidos simulados salen 4,1 goles y 14,6 tiros por partido.
+
 ## Detectado pero sin cambiar: decides tú
 
 - **Balance:** simulé 200 partidos IA contra IA y salen 3,35 goles y 15,6 tiros por partido. El comentario de `BALANCE` dice que está calibrado en unos 2,6 goles y 13 tiros, con un objetivo de 2-3 goles. Para volver a ese rango, se podría bajar `shot.base` de 28 a unos 24 y volver a simular (Modo prueba → "Simular 50 partidos").
