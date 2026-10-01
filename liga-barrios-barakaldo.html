@@ -3592,6 +3592,204 @@ FERIA.G.slot={n:"La Txapela de Oro",d:"Tragaperras de bar: retenciones, avances,
    txt(`PENALTI ${Math.min(3,B.n+1)}/3 · GOLES ${B.goals} · ×${SLOT.goalMul} por gol`,x+w/2,y+8,"#fff",6,"center",null,10);if(B.st==="aim")txt("Chuta cuando la mirilla esté lejos del portero",x+w/2,y+h-3,"#f5d142",5,"center",null,8);if(B.res)bigTxt(B.res==="gol"?"¡GOL!":B.res==="fuera"?"FUERA":"¡PARADA!",x+w/2,y+h*.6,B.res==="gol"?"#f5c030":"#e0552b",12,18);}
 };
 FERIA.order.push("slot");
+// ---- Mus a 8 reyes, por parejas, a 30 tantos ----
+// Tú (asiento 0, abajo) vas con tu compañero (2, arriba) contra 1 (derecha) y 3 (izquierda). Se habla hacia la derecha: 0→1→2→3, empezando por la mano.
+// Lances: grande, chica, pares y juego (punto si nadie tiene juego). Envites de 2 o 5, reenvites y órdago. Las señas del compañero se ven; las de los rivales, a veces.
+// El tres cuenta como rey y el dos como as. Empates: gana quien esté más cerca de la mano.
+const MUSV=r=>r===3?12:r===2?1:r,musPt=r=>{const v=MUSV(r);return v>=10?10:v;};
+const MUSJ=[33,34,35,36,37,40,32,31],MUSL=["grande","chica","pares","juego"],MUSMETA=30; // juego de peor a mejor
+function musPares(h){const n={};h.forEach(c=>{const v=MUSV(c.r);n[v]=(n[v]||0)+1;});const ks=Object.keys(n).map(Number).sort((a,b)=>b-a),pr=ks.filter(k=>n[k]===2),tr=ks.find(k=>n[k]===3),fo=ks.find(k=>n[k]===4);
+  return fo?{t:3,k:[fo,fo]}:pr.length===2?{t:3,k:pr}:tr?{t:2,k:[tr]}:pr.length?{t:1,k:pr}:{t:0,k:[]};}
+const musSum=h=>h.reduce((a,c)=>a+musPt(c.r),0);
+const musElig=(l,h)=>l==="pares"?musPares(h).t>0:l==="juego"?musSum(h)>=31:l==="punto"?musSum(h)<31:true;
+// Valor comparable de una mano en un lance (más alto, mejor)
+function musKey(l,h){const v=h.map(c=>MUSV(c.r)),b=a=>a.reduce((s,x)=>s*13+x,0);
+  if(l==="grande")return b(v.sort((a,c)=>c-a));if(l==="chica")return -b(v.sort((a,c)=>a-c));
+  if(l==="pares"){const p=musPares(h);return p.t*1000+(p.k[0]||0)*13+(p.k[1]||0);}
+  const s=musSum(h);return l==="juego"?(s>=31?100+MUSJ.indexOf(s):0):s;}
+// Percentil de la mano entre las que juegan ese lance (tabla de 6000 manos al azar, se hace una vez)
+let MUSP=null;
+function musPct(l,h){if(!MUSP){MUSP={};const L=[...MUSL,"punto"];L.forEach(k=>MUSP[k]=[]);for(let i=0;i<6000;i++){const d=newDeck(),hh=d.slice(0,4);L.forEach(k=>{if(musElig(k,hh))MUSP[k].push(musKey(k,hh));});}L.forEach(k=>MUSP[k].sort((a,b)=>a-b));}
+  const A=MUSP[l],x=musKey(l,h);let lo=0,hi=A.length;while(lo<hi){const m=(lo+hi)>>1;if(A[m]<x)lo=m+1;else hi=m;}let up=lo;while(up<A.length&&A[up]===x)up++;return(lo+(up-lo)/2)/A.length;}
+function musWin(g,l,E){let b=-1;for(let i=0;i<4;i++){const s=(g.mano+i)%4;if(E&&!E.includes(s))continue;if(b<0||musKey(l,g.h[s])>musKey(l,g.h[b]))b=s;}return b;}
+const musVN=v=>({12:"reyes",11:"caballos",10:"sotas",1:"ases"})[v]||v+"s";
+function musDesc(h,l){const p=musPares(h),s=musSum(h),v=h.map(c=>MUSV(c.r)),L=v.map(x=>({12:"R",11:"C",10:"S",1:"A"})[x]||x);
+  if(l==="grande")return L.slice().sort((a,b)=>v[L.indexOf(b)]-v[L.indexOf(a)]).join(" ");if(l==="chica")return L.slice().sort((a,b)=>v[L.indexOf(a)]-v[L.indexOf(b)]).join(" ");
+  if(l==="pares")return p.t===3?(p.k[0]===p.k[1]?"duples de "+musVN(p.k[0]):`duples ${musVN(p.k[0])} y ${musVN(p.k[1])}`):p.t===2?"medias de "+musVN(p.k[0]):p.t===1?"par de "+musVN(p.k[0]):"sin pares";
+  return s>=31?(s===31?"la 31":"juego "+s):"punto "+s;}
+// Seña que haría un jugador con esta mano (la más valiosa), con el lance al que informa
+function musSena(h){const p=musPares(h),s=musSum(h),v=h.map(c=>MUSV(c.r)),n12=v.filter(x=>x===12).length,n1=v.filter(x=>x===1).length;
+  if(p.t===3)return{e:"cejas",n:"duples (alza las cejas)",l:"pares"};if(s===31)return{e:"guino",n:"la 31 (guiño)",l:"juego"};if(p.t===2)return{e:"torcida",n:"medias (tuerce la boca)",l:"pares"};
+  if(n12>=2)return{e:"labio",n:"dos reyes (se muerde el labio)",l:"grande"};if(n1>=2)return{e:"lengua",n:"dos ases (saca la lengua)",l:"chica"};
+  if(n12===0&&p.t===0&&s<31)return{e:"ciego",n:"ciego, nada (cierra los ojos)",l:"grande"};return null;}
+// ---- IA ----
+const MUSPJ=[{n:"Tú"},{n:"Txomin",sk:"#e8b48a",h:"#3a2a1f",cap:1,mo:1,sh:"#2f4a6b",bluff:.2},{n:"Maite",sk:"#f1c9a5",h:"#7a3a1a",long:1,sh:"#7a2a3a",bluff:.1},{n:"Patxi",sk:"#d89a6a",h:"#bdbdbd",mo:1,sh:"#3a5a2a",bluff:.08}];
+// Probabilidad estimada de que la pareja de s gane el lance: su mano contra los rivales que juegan y lo que sepa del compañero
+function musW(g,s,l,E){const opp=E.filter(q=>q%2!==s%2).length||1,mate=(s+2)%4,p=musPct(l,g.h[s]);let pm=g.know[s][l]!=null?g.know[s][l]:E.includes(mate)?.5:0;
+  let w=1-(1-Math.pow(p,opp))*(1-Math.pow(pm,opp));if(s%2===1&&g.caught[l]!=null)w-=(g.caught[l]-.5)*.4;return clamp(w,0,1);}
+function musAiOpen(g,s,l,E){const w=musW(g,s,l,E),me=g.sc[s%2],op=g.sc[1-s%2];
+  if(w>.93&&rnd()<.22||w>.82&&op-me>=12&&op>=MUSMETA-10&&rnd()<.35)return"ordago";if(w>.78)return rnd()<.45?"e5":"e2";if(w>.58)return"e2";if(rnd()<MUSPJ[s].bluff)return"e2";return"paso";}
+function musAiResp(g,s,l,E,st){const w=musW(g,s,l,E)-.08,lose=st.prev||1,op=g.sc[1-s%2];
+  if(st.ord)return w>.6||op+lose>=MUSMETA&&w>.25||op>=MUSMETA-6&&w>.42?"quiero":"nq";
+  if(w>.9&&rnd()<.15)return"ordago";if(w>.72&&st.amt<10&&rnd()<.55)return"r2";
+  return(2*w-1)*st.amt>-lose||rnd()<MUSPJ[s].bluff*.3?"quiero":"nq";}
+function musAiMus(g,s){const h=g.h[s],p=musPares(h),sm=musSum(h),v=h.map(c=>MUSV(c.r));
+  const q=(p.t>=2?2:p.t===1&&p.k[0]>=10?1:0)+(sm===31?2:sm>=31?1:0)+(v.filter(x=>x===12).length>=3?1:0)+(v.filter(x=>x===1).length>=3?1:0);return q<2&&!(q===1&&rnd()<.2);}
+function musAiDisc(h){const v=h.map(c=>MUSV(c.r)),n={};v.forEach(x=>n[x]=(n[x]||0)+1);const keep=v.map(x=>n[x]>=2||x===12||x===1&&n[1]>=2||x===11&&n[12]>=2);
+  if(keep.every(k=>k)){let wi=0;v.forEach((x,i)=>{if((n[x]<2)>(n[v[wi]]<2)||(n[x]<2)===(n[v[wi]]<2)&&x<v[wi])wi=i;});keep[wi]=false;}return keep.map(k=>!k);}
+// ---- Desarrollo de la partida (generador: cede un número = espera en segundos, o {ask} = turno tuyo) ----
+const musH=(g,s)=>s===0&&!g.auto;
+function musSay(g,s,t,hot){if(s==null){g.bub=[null,null,null,null];return;}g.bub[s]={t,l:1.9,hot};if(!g.fast)hot?tone(260,.08,"square",.05):tone(520+s*40,.04,"triangle",.03);}
+function musOrdFx(g){g.fx={s:"¡ÓRDAGO!",t:1.3};if(!g.fast){noise(.25,.08);[196,262,392].forEach((f,i)=>tone(f,.25,"sawtooth",.05,i*.06));}}
+function* musFlow(g){
+  for(;;){g.dk=newDeck();g.disc=[];g.h=[[],[],[],[]];g.L={};g.reveal=false;g.know=[{},{},{},{}];g.caught={};g.cont=null;g.lance=null;g.decl={};g.sena=null;g.sel=[0,0,0,0];g.manos++;
+    for(let r=0;r<4;r++)for(let i=0;i<4;i++){const s=(g.mano+i)%4;g.h[s].push(g.dk.pop());if(!g.fast)tone(900+r*40,.02,"triangle",.03);yield .05;}
+    musSort(g);yield .3;
+    // Mus: si todos piden mus, cada uno tira de 1 a 4 cartas y vuelve a hablar
+    for(;;){let cut=false;
+      for(let i=0;i<4;i++){const s=(g.mano+i)%4;let a;if(musH(g,s))a=yield{ask:"mus"};else{yield .5+rnd()*.4;a=musAiMus(g,s)?"mus":"nomus";}
+        musSay(g,s,a==="mus"?"Mus":"No hay mus",a!=="mus");if(a!=="mus"){cut=true;break;}}
+      if(cut)break;g.muses++;yield .5;musSay(g,null);
+      for(let i=0;i<4;i++){const s=(g.mano+i)%4;let d;if(musH(g,s)){g.sel=[0,0,0,0];d=yield{ask:"descarte"};g.sel=[0,0,0,0];}else{yield .4;d=musAiDisc(g.h[s]);}
+        const n=d.filter(x=>x).length;g.h[s]=g.h[s].filter((c,k)=>{if(d[k]){g.disc.push(c);return false;}return true;});
+        for(let k=0;k<n;k++){if(!g.dk.length){g.dk=g.disc.sort(()=>rnd()-.5);g.disc=[];}g.h[s].push(g.dk.pop());}
+        musSay(g,s,"Dame "+["","una","dos","tres","cuatro"][n]);if(!g.fast)tone(700,.03,"triangle",.03);}
+      musSort(g);yield .7;musSay(g,null);}
+    yield .5;musSay(g,null);
+    yield* musSenas(g);
+    for(const l0 of MUSL){let l=l0,E=[0,1,2,3].map(i=>(g.mano+i)%4);g.lance=l;
+      if(l==="pares"||l==="juego"){for(const s of E){const has=musElig(l,g.h[s]);g.decl[l+s]=has;musSay(g,s,(l==="pares"?"Pares ":"Juego ")+(has?"sí":"no"),has);yield .42;}
+        E=E.filter(s=>musElig(l,g.h[s]));if(l==="juego"&&!E.length){l="punto";g.lance="punto";E=[0,1,2,3].map(i=>(g.mano+i)%4);}yield .3;musSay(g,null);}
+      if(!E.length){g.L[l]={no:true};continue;}
+      if(!E.some(s=>s%2===0)||!E.some(s=>s%2===1)){g.L[l]={solo:true};continue;}
+      const r=yield* musBet(g,l,E);yield .5;musSay(g,null);
+      if(r==="ordago"){g.reveal=true;const w=musWin(g,l,E);g.cont=[{t:`Órdago a ${l==="punto"?"el punto":"la "+l}: gana ${MUSPJ[w].n} con ${musDesc(g.h[w],l)}`,c:w%2?"#e0552b":"#f5c030"}];yield 2.2;g.sc[w%2]=MUSMETA;g.over={w:w%2,ord:true};return;}}
+    yield* musConteo(g);if(g.over)return;g.mano=(g.mano+1)%4;}}
+function* musSenas(g){const sp=musSena(g.h[2]);
+  if(sp){g.know[0][sp.l]=musPct(sp.l,g.h[2]);g.sena={s:2,e:sp.e,txt:`${MUSPJ[2].n} te hace una seña: ${sp.n}`,t:2.4};yield 2.4;}
+  const my=musSena(g.h[0]);
+  if(my){let a="sy";if(musH(g,0)){g.sena={s:0,e:my.e,txt:`Puedes hacer la seña de ${my.n}`,t:99};a=yield{ask:"sena"};g.sena=null;}else a=rnd()<.7?"sy":"sn";
+    if(a==="sy"){g.know[2][my.l]=musPct(my.l,g.h[0]);g.mySena=my;if(rnd()<.35){g.caught[my.l]=musPct(my.l,g.h[0]);fMsg("¡Te han pillado la seña!","#e0552b",1.6);yield 1.2;}}}
+  for(const s of [1,3]){const sr=musSena(g.h[s]);if(!sr)continue;g.know[(s+2)%4][sr.l]=musPct(sr.l,g.h[s]);if(rnd()<.4){g.sena={s,e:sr.e,txt:`¡Pillas a ${MUSPJ[s].n} haciendo una seña: ${sr.n}!`,t:2.2};yield 2.2;}}
+  g.sena=null;}
+function* musBet(g,l,E){const st={amt:0,prev:0,by:-1,ord:false};g.L[l]={};
+  for(const s of E){let a;if(musH(g,s))a=yield{ask:"abre",l};else{yield .6+rnd()*.5;a=musAiOpen(g,s,l,E);}
+    if(a==="paso"){musSay(g,s,"Paso");continue;}
+    st.by=s%2;st.prev=1;if(a==="ordago"){st.ord=true;st.amt=MUSMETA;musSay(g,s,"¡Órdago!",1);musOrdFx(g);g.ords++;}else{st.amt=a==="e5"?5:2;musSay(g,s,a==="e5"?"Cinco":"Envido",1);}g.L[l]={bet:st.amt,ord:st.ord,pend:true,by:st.by};break;}
+  if(st.by<0){g.L[l]={paso:true};return"paso";}
+  for(;;){const R=E.filter(s=>s%2!==st.by),resp=R.includes(0)&&!g.auto?0:R[0];let a;
+    if(musH(g,resp))a=yield{ask:"responde",l,st};else{yield .7+rnd()*.6;a=musAiResp(g,resp,l,E,st);}
+    if(a==="nq"){musSay(g,resp,"No quiero");g.L[l]={nq:true,win:st.by,pts:st.prev,bet:st.amt,ord:st.ord};return"nq";}
+    if(a==="quiero"){musSay(g,resp,"Quiero",1);g.L[l]={bet:st.amt,ord:st.ord,q:true};return st.ord?"ordago":"quiero";}
+    st.prev=st.amt;st.by=resp%2;if(a==="ordago"){st.ord=true;st.amt=MUSMETA;musSay(g,resp,"¡Órdago!",1);musOrdFx(g);g.ords++;}else{st.amt+=a==="r5"?5:2;musSay(g,resp,a==="r5"?"Cinco más":"Dos más",1);}
+    g.L[l]={bet:st.amt,ord:st.ord,pend:true,by:st.by};}}
+// Conteo al final de la mano, lance a lance; se acaba en cuanto una pareja llega a 30
+function* musConteo(g){g.reveal=true;g.cont=[];yield .9;
+  for(const l of ["grande","chica","pares",g.L.punto?"punto":"juego"]){const L=g.L[l];if(!L||L.no)continue;const E=[0,1,2,3].filter(s=>musElig(l,g.h[s])),w=musWin(g,l,E),A=[];
+    const nm=l==="punto"?"Punto":l[0].toUpperCase()+l.slice(1);
+    if(L.nq)A.push([L.win,L.pts,`${nm}: no quiso → ${L.pts}`]);else if(L.q)A.push([w%2,L.bet,`${nm}: ${MUSPJ[w].n} (${musDesc(g.h[w],l)}) → ${L.bet} del envite`]);
+    else if(L.paso&&(l==="grande"||l==="chica"))A.push([w%2,1,`${nm} en paso: ${MUSPJ[w].n} (${musDesc(g.h[w],l)}) → 1`]);
+    if(l==="pares"){const b=E.filter(s=>s%2===w%2).reduce((a,s)=>a+musPares(g.h[s]).t,0);A.push([w%2,b,`Pares: ${MUSPJ[w].n} (${musDesc(g.h[w],l)}) → ${b}`]);}
+    if(l==="juego"){const b=E.filter(s=>s%2===w%2).reduce((a,s)=>a+(musSum(g.h[s])===31?3:2),0);A.push([w%2,b,`Juego: ${MUSPJ[w].n} (${musDesc(g.h[w],l)}) → ${b}`]);}
+    if(l==="punto")A.push([w%2,1,`Punto: ${MUSPJ[w].n} (${musDesc(g.h[w],l)}) → 1`]);
+    for(const[t,p,s]of A){if(!p)continue;g.sc[t]=Math.min(MUSMETA,g.sc[t]+p);g.cont.push({t:s,c:t?"#e0552b":"#f5c030"});if(!g.fast)tone(t?330:660,.06,"square",.04);yield .75;if(g.sc[t]>=MUSMETA){g.over={w:t};yield 1;return;}}}
+  if(!g.cont.length)g.cont.push({t:"Nadie se lleva nada",c:"#efe3c8"});yield 1.4;}
+function musSort(g){g.h[0].sort((a,b)=>MUSV(b.r)-MUSV(a.r)||a.s-b.s);}
+// Caras de los jugadores (24 px) con las señas
+const MFC={};
+function musFace(s,e){const k=s+(e||"n");if(MFC[k])return MFC[k];const P=MUSPJ[s],c=mkC(24,24),g=c.getContext("2d"),R=(col,x,y,w,h)=>{g.fillStyle=col;g.fillRect(x,y,w,h);},dk=sh(P.sk,.82);
+  R(P.sh,2,20,20,4);R(sh(P.sh,.75),2,20,20,1);R(dk,10,18,4,3);
+  if(P.long){R(P.h,4,4,16,14);}R(P.sk,6,5,12,13);R(P.sk,5,7,14,9);R(dk,6,17,12,1);
+  if(P.long){R(P.h,5,3,14,4);R(P.h,5,5,3,3);}else R(P.h,6,3,12,3);
+  if(P.cap){R("#1d1b26",4,2,16,4);R("#2e2d3a",5,1,14,2);R("#1d1b26",11,0,2,1);}
+  const ey=10,eye=(x,cl)=>cl?R("#3a2a1f",x,ey+1,3,1):(R("#fff",x,ey,3,2),R("#1d1b26",x+1,ey,1,2));eye(7,e==="ciego");eye(14,e==="ciego"||e==="guino");
+  const by=e==="cejas"?ey-3:ey-2;R(P.h,7,by,3,1);R(P.h,14,by,3,1);if(e==="enfado"){R(P.h,9,by+1,1,1);R(P.h,14,by+1,1,1);}
+  R(dk,11,11,2,3);if(P.mo)R(P.h,8,15,8,1);const my=16;
+  if(e==="labio"){R("#8a3a2a",9,my,6,1);R("#fff",10,my,4,1);}else if(e==="lengua"){R("#8a3a2a",9,my,6,1);R("#e06a7a",11,my+1,2,2);}
+  else if(e==="torcida"){R("#8a3a2a",9,my,3,1);R("#8a3a2a",12,my-1,4,1);}else if(e==="rie"){R("#5a1f18",9,my,6,2);R("#fff",10,my,4,1);}
+  else if(e==="enfado"){R("#8a3a2a",10,my+1,4,1);}else R("#8a3a2a",10,my,4,1);
+  return MFC[k]=c;}
+FERIA.G.mus={n:"Mus con órdago",d:"Por parejas con señas, envites y órdago. A 30 tantos, 8 reyes.",min:20,
+ ic(g){g.fillStyle="#2f7a44";g.fillRect(1,6,30,22);g.drawImage(spCard(12,0,12,18),4,9);g.drawImage(spCard(1,2,12,18),11,8);g.drawImage(spCard(3,1,12,18),18,9);},
+ odds:["Entrada: 20 fichas. Ganar la partida (a 30 tantos): 45 fichas.","Ganar la partida con un órdago querido: además, una criatura común o poco común.","Los rivales juegan con la misma información que tú: no ven tus cartas; ven tu seña solo si te la pillan (35 %).","Ves las señas de tu compañero siempre y pillas las de los rivales el 40 % de las veces.","Reglas: 8 reyes (el 3 es rey, el 2 es as), juego 31-32-40-37-36-35-34-33, empates para la mano."],
+ init(g){Object.assign(g,{st:"intro",sc:[0,0],mano:(rnd()*4)|0,h:[[],[],[],[]],bub:[null,null,null,null],L:{},know:[{},{},{},{}],caught:{},decl:{},sel:[0,0,0,0],ask:{ask:"empezar"},wt:0,it:null,over:null,prizes:[],manos:0,muses:0,ords:0,fx:null,cont:null,lance:null,reveal:false});},
+ canExit(){return true;},exitLines(g){return g.prizes.concat(g.it&&!g.over?["Te levantas de la mesa: pierdes la entrada."]:[]);},
+ start(g,free){if(!feriaPay(20,free)){fMsg(feriaWhyNot(20),"#e0552b");return;}const d=FERIA.G.mus,pr=g.prizes;d.init(g);g.prizes=pr;g.ask=null;g.it=musFlow(g);SFX.menu();},
+ btn(g,id){const d=FERIA.G.mus,A=g.ask;if(!A)return;
+   if(A.ask==="empezar"||A.ask==="fin"){if(id==="jugar")d.start(g,false);else if(id==="gratis")d.start(g,true);return;}
+   if(A.ask==="descarte"){if(id==="desc"&&g.sel.some(x=>x)){g.ask=null;g.ans=g.sel.map(x=>!!x);}return;}
+   if((d.opts(g)||[]).some(o=>o[0]===id)){g.ask=null;g.ans=id;}},
+ opts(g){const A=g.ask;if(!A)return null;
+   if(A.ask==="mus")return[["mus","MUS","#2f9a4a"],["nomus","NO HAY MUS","#e0552b"]];
+   if(A.ask==="sena")return[["sy","HACER LA SEÑA","#6ad1c4"],["sn","NO HACERLA","#9a8f78"]];
+   if(A.ask==="abre")return[["paso","PASO","#9a8f78"],["e2","ENVIDO","#2f9a4a"],["e5","CINCO","#e9b949"],["ordago","ÓRDAGO","#e0301f"]];
+   if(A.ask==="responde")return A.st.ord?[["quiero","QUIERO","#2f9a4a"],["nq","NO QUIERO","#9a8f78"]]:[["quiero","QUIERO","#2f9a4a"],["nq","NO QUIERO","#9a8f78"],["r2","DOS MÁS","#e9b949"],["ordago","ÓRDAGO","#e0301f"]];
+   return null;},
+ key(g,k){const d=FERIA.G.mus,A=g.ask;if(!A)return;if(A.ask==="descarte"&&"1234".includes(k)&&k.length===1){const i=+k-1;g.sel[i]=g.sel[i]?0:1;tone(600,.03,"square",.03);return;}
+   if(A.ask==="descarte"&&(k===" "||k==="Enter"))return d.btn(g,"desc");if(A.ask==="empezar"||A.ask==="fin"){if(k===" "||k==="Enter")d.btn(g,feriaSt().free>0?"gratis":"jugar");return;}
+   const o=d.opts(g);if(!o)return;const m={" ":0,Enter:0,n:1,p:0,q:0,m:0,o:o.length-1,"2":o.length>2?2:-1};const i=m[k];if(i!=null&&i>=0&&o[i])d.btn(g,o[i][0]);},
+ dn(g,x,y){if(g.ask&&g.ask.ask==="descarte"&&g.cardR){const i=g.cardR.findIndex(r=>x>=r[0]&&x<r[0]+r[2]&&y>=r[1]-8&&y<r[1]+r[3]);if(i>=0){g.sel[i]=g.sel[i]?0:1;tone(600,.03,"square",.03);}}},
+ up(g,dt){g.bub.forEach((b,i)=>{if(b&&(b.l-=dt)<=0)g.bub[i]=null;});if(g.sena&&g.sena.t<50&&(g.sena.t-=dt)<=0)g.sena=null;if(g.fx&&(g.fx.t-=dt)<=0)g.fx=null;
+   if(!g.it||g.ask)return;if(g.wt>0){g.wt-=dt;return;}
+   const r=g.it.next(g.ans);g.ans=undefined;
+   if(r.done){g.it=null;if(g.over){const won=g.over.w===0;g.ask={ask:"fin"};g.cont=null;if(won){feriaGain(45);const t=["Ganas la partida de mus: +45 fichas."];if(g.over.ord)t.push(feriaCre("n"));g.prizes.push(...t);SFX.gol();}else sfx("mal");save();}return;}
+   const v=r.value;if(typeof v==="number")g.wt=v;else g.ask=v;},
+ dr(g){const d=FERIA.G.mus;ctx.drawImage(feriaBarBg(),0,0);fR("rgba(10,8,14,.55)",0,0,W,H);
+   const port=H>W,bH=port?22:20,by=H-SAFE.b-bH-6,ch=Math.round(Math.min(port?H*.15:H*.24,(W-40)/4*1.5)),cw=Math.round(ch/1.5),hy=by-ch-(port?20:12);
+   const tx=port?8:Math.round(W*.2),tw=port?W-16:Math.round(W*.6),ty=Math.round(port?SAFE.t+64:SAFE.t+30),th=Math.round(hy+ch*.45-ty);
+   // luz de la lámpara sobre la mesa
+   const lg=ctx.createRadialGradient(W/2,ty+th*.45,10,W/2,ty+th*.45,Math.max(tw,th)*.9);lg.addColorStop(0,"rgba(255,210,140,.25)");lg.addColorStop(1,"rgba(0,0,0,0)");
+   feltTable(tx,ty,tw,th);ctx.fillStyle=lg;ctx.fillRect(0,0,W,H);
+   const rw=Math.round(Math.min(cw*.55,th*.16)),rh=Math.round(rw*1.5),cx=W/2,cy=ty+th*.42,sc=Math.max(1,Math.round(Math.min(W,H)/150)),fz=24*sc,sm=Math.round(cw*.42),smh=Math.round(sm*1.5);
+   // asientos: cara, nombre y cartas (dorso, o boca arriba al ver)
+   const seat=[null,{x:tx+tw-fz/2+2,y:cy,dx:-1,dy:0},{x:cx,y:ty+fz/2-4,dx:0,dy:1},{x:tx+fz/2-2,y:cy,dx:1,dy:0}];
+   const mood=s=>g.over?(g.over.w===s%2?"rie":"enfado"):g.sena&&g.sena.s===s&&g.sena.t>0?g.sena.e:g.bub[s]&&g.bub[s].hot?"cejas":"n";
+   for(let s=1;s<4;s++){const P=seat[s],fx=Math.round(P.x-fz/2),fy=Math.round(P.y-fz/2);fR("rgba(0,0,0,.35)",fx+2,fy+3,fz,fz);ctx.drawImage(musFace(s,mood(s)),fx,fy,fz,fz);
+     fR(s%2?"#e0552b":"#f5c030",fx,fy+fz,fz,2);txt(MUSPJ[s].n,P.x,fy+fz+8,s%2?"#ff9a80":"#f5d142",6,"center",null,9);if(g.mano===s)txt("MANO",P.x,fy-3,"#fff",5,"center",null,8);
+     const n=g.h[s].length,up=g.reveal,w=up?rw:sm,h2=up?rh:smh;
+     for(let i=0;i<n;i++){let qx,qy;if(!P.dx){qx=P.x+(i-(n-1)/2)*(w+2)-w/2;qy=P.y+fz/2+12;}
+       else if(up){const col=i%2,row=i>>1;qx=P.dx>0?P.x+fz/2+5+col*(w+2):P.x-fz/2-5-(2-col)*(w+2)+2;qy=P.y-h2-1+row*(h2+2);}
+       else{qx=P.dx>0?P.x+fz/2+5:P.x-fz/2-5-w;qy=P.y-h2/2+(i-(n-1)/2)*h2*.38;}
+       drawCard(g.h[s][i],qx,qy,w,h2,up);}}
+   // tu mano
+   const n0=g.h[0].length;g.cardR=[];const sel=g.ask&&g.ask.ask==="descarte";
+   for(let i=0;i<n0;i++){const x=Math.round(cx+(i-(n0-1)/2)*(cw+6)-cw/2),lift=g.sel[i]&&sel?ch*.25:0;g.cardR.push([x,hy,cw,ch]);drawCard(g.h[0][i],x,hy,cw,ch,true,lift);
+     if(sel){txt(String(i+1),x+cw/2,hy+ch+8,"#9a8f78",5,"center","none",8);if(g.sel[i]){fR("rgba(224,85,43,.35)",x,hy-lift,cw,ch);txt("TIRA",x+cw/2,hy-lift+ch/2+3,"#fff",6,"center",null,9);}}}
+   if(g.mano===0)txt("MANO",cx-(n0/2)*(cw+6)-14,hy+ch/2,"#fff",5,"center",null,8);
+   if(n0&&!g.over)txt(MUSL.map(l=>l==="juego"&&musSum(g.h[0])<31?musDesc(g.h[0],"punto"):l==="grande"||l==="chica"?null:musDesc(g.h[0],l)).filter(x=>x).join(" · "),cx,hy-5,"#efe3c8",5,"center",null,9);
+   // bocadillos
+   const bpos=[[cx,hy-16],[seat[1].x-fz/2-4,cy-fz/2-6,"right"],[cx+fz/2+6,seat[2].y-6,"left"],[seat[3].x+fz/2+4,cy-fz/2-6,"left"]];
+   g.bub.forEach((b,s)=>{if(!b)return;const p=bpos[s],w=tw0(b.t)+10,al=p[2]||"center",x0=al==="center"?p[0]-w/2:al==="right"?p[0]-w:p[0];fR("rgba(0,0,0,.3)",x0+2,p[1]-9,w,13);fR(b.hot?"#fff6d0":"#fbf6ea",x0,p[1]-11,w,13);fR(b.hot?"#e0552b":"#1d1b26",x0,p[1]+1,w,1);txt(b.t,x0+w/2,p[1]-2,b.hot?"#b3202a":"#1d1b26",6,"center","none",9);});
+   // lances
+   const LL=["grande","chica","pares",g.lance==="punto"||g.L.punto?"punto":"juego"],lw=Math.min(52,(tw-fz*2-8)/4),lx=cx-lw*2,ly=hy-(port?44:46);
+   LL.forEach((l,i)=>{const L=g.L[l],on=g.lance===l&&!g.reveal,x=lx+i*lw,y=ly;fR(on?"rgba(245,192,48,.3)":"rgba(0,0,0,.3)",x+1,y,lw-2,22);if(on)fR("#f5c030",x+1,y,lw-2,1);
+     txt(l.toUpperCase(),x+lw/2,y+8,on?"#f5d142":"#c9c0a8",5,"center","none",8);
+     const st=!L?"":L.no?"no se juega":L.solo?"solo uno":L.paso?"en paso":L.nq?"no quiso":L.ord?(L.q?"¡ÓRDAGO!":"órdago…"):L.q?L.bet+" querido":L.pend?L.bet+"…":"";if(st)txt(st,x+lw/2,y+17,L&&L.ord?"#ff6a50":"#fff",5,"center","none",8);});
+   // tanteo con piedras (amarracos de 5 y piedras sueltas)
+   const bx=port?W-SAFE.r-86:W-SAFE.r-92,byy=SAFE.t+4;fR("rgba(29,27,38,.88)",bx,byy,port?82:88,30);[[0,"NOSOTROS","#f5c030"],[1,"ELLOS","#e0552b"]].forEach(([t,nm,col],i)=>{const yy=byy+10+i*13;txt(nm,bx+4,yy,col,5,"left","none",8);txt(String(g.sc[t]),bx+(port?78:84),yy,"#fff",7,"right","none",10);
+     const a=Math.floor(g.sc[t]/5),r=g.sc[t]%5;for(let k=0;k<a;k++){fR("#8a8f99",bx+38+k*5,yy-6,4,4);fR("#c9ced8",bx+38+k*5,yy-6,3,1);}for(let k=0;k<r;k++)fR("#c9ced8",bx+38+a*5+k*3,yy-4,2,2);});
+   txt(`a ${MUSMETA}`,bx+(port?41:44),byy+38,"#9a8f78",5,"center","none",8);
+   // conteo / showdown
+   if(g.cont&&g.cont.length){const n=g.cont.length,pw=port?tw-8:Math.min(tw-2*fz-8,300),ph=n*11+10,px=cx-pw/2,py=port?ly-ph-4:Math.min(cy-ph/2+8,ly-ph-4);fR("rgba(13,10,18,.9)",px,py,pw,ph);fR("#f5c030",px,py,pw,1);g.cont.forEach((c,i)=>txt(c.t,cx,py+12+i*11,c.c,5,"center","none",8));}
+   // seña en grande
+   if(g.sena&&g.sena.s!==0){const s=g.sena.s,z=fz*2,px=cx-z/2,py=cy-z/2-6;fR("rgba(0,0,0,.6)",px-6,py-6,z+12,z+24);ctx.drawImage(musFace(s,g.sena.e),px,py,z,z);txt(g.sena.txt,cx,py+z+12,s===2?"#f5d142":"#ff9a80",6,"center",null,9);}
+   if(g.sena&&g.sena.s===0){const pw=Math.min(tw-2*(fz+sm+12),280);fR("rgba(13,10,18,.82)",cx-pw/2,cy-14,pw,28);txt(g.sena.txt,cx,cy-3,"#6ad1c4",6,"center","none",9);txt("La verá tu compañero… y quizá también ellos.",cx,cy+9,"#c9c0a8",5,"center","none",8);}
+   if(g.fx){ctx.save();const a=Math.min(1,g.fx.t*2);ctx.globalAlpha=a;bigTxt(g.fx.s,cx+(rnd()-.5)*3,cy+6,"#ff6a50",18,26,"#7a1010");ctx.restore();}
+   // botones
+   const O=d.opts(g),A=g.ask;let B=null;
+   if(A&&(A.ask==="empezar"||A.ask==="fin")){const F=feriaSt();B=F.free>0?[["gratis","PARTIDA GRATIS","#7cc050"]]:[["jugar",A.ask==="fin"?"OTRA (20 FICHAS)":"JUGAR (20 FICHAS)","#2f9a4a"]];
+     if(A.ask==="empezar"){const pw=Math.min(port?tw-8:tw-2*(fz+sm+12),250),py=port?ly-70:cy-34;fR("rgba(13,10,18,.85)",cx-pw/2,py,pw,62);txt("MUS CON ÓRDAGO",cx,py+13,"#f5c030",8,"center",null,12);
+       ["Vas con "+MUSPJ[2].n+" contra "+MUSPJ[1].n+" y "+MUSPJ[3].n+". A 30 tantos.","Mira las señas de tu compañero y pilla las de ellos.","Envida, pasa o lánzate al órdago. Ganar: 45 fichas."].forEach((s,i)=>txt(s,cx,py+27+i*10,"#efe3c8",5,"center","none",8));}
+     if(A.ask==="fin"){const wn=g.over&&g.over.w===0;const yy=ly-22;fR("rgba(13,10,18,.8)",cx-90,yy-22,180,34);bigTxt(wn?"¡GANÁIS!":"GANAN ELLOS",cx,yy-2,wn?"#f5c030":"#e0552b",14,22);txt(`${g.sc[0]} a ${g.sc[1]}${wn?" · +45 fichas"+(g.over.ord?" y una criatura":""):""}`,cx,yy+9,"#efe3c8",7,"center",null,10);}}
+   else if(A&&A.ask==="descarte"){const n=g.sel.filter(x=>x).length;B=[["desc",n?`DESCARTAR ${n}`:"TOCA LAS QUE TIRAS","#e9b949",!n]];}
+   else if(O)B=O;
+   if(B){const gw=Math.min(W-16-SAFE.l-SAFE.r,port?W:Math.max(260,B.length*80)),bw=(gw-(B.length-1)*4)/B.length,x0=cx-gw/2;
+     B.forEach((b,i)=>fBtn(b[0],x0+i*(bw+4),by,bw,bH,b[1],{col:b[2],fg:b[2]==="#e0301f"||b[2]==="#e0552b"||b[2]==="#2f9a4a"?"#fff":"#1d1b26",off:b[3],sz:port?6:7,lit:b[0]==="ordago"&&A.ask==="responde",key:i===0?" ":null}));
+     if(A&&(A.ask==="abre"||A.ask==="responde")){const l=A.l,nm=l==="punto"?"al punto":"a "+l;txt(A.ask==="abre"?`Te toca hablar ${nm}`:`Te envidan ${A.st.ord?"un ÓRDAGO":A.st.amt} ${nm}: si no quieres, ellos se llevan ${A.st.prev}`,cx,by-4,"#f5d142",6,"center",null,9);}
+     else if(A&&A.ask==="mus")txt("¿Pides mus para cambiar cartas o cortas y se juega?",cx,by-4,"#f5d142",6,"center",null,9);}}
+};
+const tw0=s=>tw(s,6,9);
+FERIA.order.push("mus");
 $("bSnd").textContent=AU.on?"♪":"✕♪";
 window.G={get E(){return E;},get ROAM(){return ROAM;},get MG2(){return MG2;},get W(){return W;},get H(){return H;},get F(){return{FX0,FX1,FY0,FY1,GCX,MIDY};},get S(){return S;},get M(){return M;},get scene(){return scene;},set HALF(v){HALF=v;},P,DATA,newGame,startMatchFlow,zoneTeam,buildTeam,newCre,addCre,say,testAct,startRecruit};
 // Los sprites PixelLab se decodifican antes del primer dibujo (formImg, human e itemImg los usan de forma síncrona y cachean).
