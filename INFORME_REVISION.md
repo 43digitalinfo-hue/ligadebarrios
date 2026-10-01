@@ -114,6 +114,26 @@ Probado con un jugador automático que usa el joystick y los botones táctiles (
 - **Descanso, prealineación y resultado en horizontal:** las criaturas van en dos columnas y el botón (¡Segunda parte!, ¡Al campo!, Continuar) queda fijo abajo. Ya no hay que desplazar la pantalla para seguir. En vertical se ven igual que antes.
 - **Resultado:** muestra también los tiros de cada equipo.
 
+## Novena tanda: minijuegos en HD e interfaz más nítida
+
+- **Capa HD:** los minijuegos se dibujan en un lienzo a la resolución real de la pantalla, no en píxeles ampliados. Tienen formas redondeadas, degradados, sombras suaves y texturas: césped, ladrillo, agua, madera y piedra.
+- **Los 24 minijuegos de los barrios, los 4 de captura y los 3 entrenamientos** tienen escenario nuevo. Personajes y balón son vectoriales.
+- **Criaturas:** en los minijuegos y en los menús se escalan ×8 con Scale2x. Quedan nítidas y con bordes redondeados, sin desenfoque.
+- **Mecánicas arregladas:**
+  - **Regata:** la cámara sigue al bote y la barra de ritmo ya no tapa los botones.
+  - **Simón:** tienes un fallo de cortesía. Al fallar se repite la secuencia; el segundo fallo acaba la partida. Además, las zonas de toque son más grandes.
+  - **Cotillas:** basta con mantener el dedo donde quieras ir; ya no hay que empezar el arrastre sobre el personaje.
+  - **Mus:** las cartas se adaptan al alto de la pantalla.
+  - **Aizkolari:** las barras ya no tapan a los aizkolaris.
+  - **Uno contra uno:** el indicador del gesto está siempre en el mismo sitio.
+  - **Pulso, Pesca y Acecho:** ya no salen cifras «-1» sin parar.
+- **Interfaz:**
+  - **Tipografía:** Nunito, una letra redondeada y nítida, en menús y en los textos del juego.
+  - **Botones:** redondeados, con relieve suave.
+  - **Paneles, diálogos y tarjetas:** con cristal translúcido y sombras.
+  - **Barras y etiquetas:** en forma de píldora.
+  - **Rótulo del barrio:** se dibuja a resolución real.
+
 ## Error corregido: el juego se congelaba tras ganar a Retuerto
 
 - **Causa:** la animación de la insignia usaba las rayas de velocidad de la pantalla de tiro, y estas leían el reloj del tiro (`CS.t`). Fuera de un tiro `CS` está vacío, así que el dibujo fallaba en cada fotograma. La animación nunca terminaba y el juego se quedaba en negro. Pasaba con la primera insignia (Retuerto) y habría pasado con todas.
@@ -126,7 +146,7 @@ Probado con un jugador automático que usa el joystick y los botones táctiles (
 - **Desierto sin rara especial:** es el único barrio sin entrada en `DATA.specialRare`, porque ninguna de sus criaturas nuevas es rara.
 - **Estadística "fuera":** en la simulación sale siempre 0; los saques de banda prácticamente no ocurren.
 - **Zoom bloqueado:** `user-scalable=no` impide ampliar la página, lo que afecta a la accesibilidad.
-- **Fuente:** Pixelify Sans se descarga de Google Fonts; sin conexión se usa una monoespaciada.
+- **Fuente:** Nunito se descarga de Google Fonts. Sin conexión se usa la letra del sistema, que también es limpia.
 
 ## Pruebas hechas en el navegador (servidor local)
 

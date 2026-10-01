@@ -29,6 +29,8 @@ tragaperras de bar, mus con órdago, dados del mentiroso, gancho de feria, sokat
 
 Los 24 minijuegos de los barrios comparten una capa común: cuenta atrás 3-2-1, puntos flotantes, rachas, sacudida al fallar,
 medalla en directo y aviso en los últimos segundos. Todos tienen escenario y animaciones propias.
+Se dibujan en HD a la resolución real de la pantalla, con escenarios redondeados y texturas, personajes vectoriales
+y criaturas escaladas con Scale2x.
 
 ## Contenido
 
