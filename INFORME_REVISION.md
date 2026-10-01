@@ -108,6 +108,12 @@ Probado con un jugador automático que usa el joystick y los botones táctiles (
 - **Tiro:** el botón TIRO lleva un aro verde, amarillo o rojo según la calidad de la posición, y el aviso "¡TIRO!" muestra el % aproximado. Dentro de rango, el tiro sale al pulsar y no al soltar.
 - **Partes de 60 s** (antes 45): más jugadas ahora que el ritmo es más tranquilo. En 100 partidos simulados salen 4,1 goles y 14,6 tiros por partido.
 
+## Octava tanda: diseño de las pantallas en el móvil
+
+- **Elegir parada, bloqueo o corte con cartas:** antes era una lista que tapaba media pantalla en horizontal. Ahora es una franja abajo con una carta por opción, igual que las de tu tiro. Cada carta muestra la técnica, su coste y el % de parar o cortar. En el móvil se elige con un toque; con teclado, con 1-9, flechas y Enter. Si pasan 7 s, se queda la opción marcada.
+- **Descanso, prealineación y resultado en horizontal:** las criaturas van en dos columnas y el botón (¡Segunda parte!, ¡Al campo!, Continuar) queda fijo abajo. Ya no hay que desplazar la pantalla para seguir. En vertical se ven igual que antes.
+- **Resultado:** muestra también los tiros de cada equipo.
+
 ## Detectado pero sin cambiar: decides tú
 
 - **Balance:** simulé 200 partidos IA contra IA y salen 3,35 goles y 15,6 tiros por partido. El comentario de `BALANCE` dice que está calibrado en unos 2,6 goles y 13 tiros, con un objetivo de 2-3 goles. Para volver a ese rango, se podría bajar `shot.base` de 28 a unos 24 y volver a simular (Modo prueba → "Simular 50 partidos").

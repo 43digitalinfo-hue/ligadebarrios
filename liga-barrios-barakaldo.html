@@ -49,7 +49,7 @@ button.on{background:var(--rust)}
 #dlgC{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 #dlgC .more{position:absolute;right:10px;bottom:4px;color:var(--rust);animation:b .8s steps(2) infinite}
 @keyframes b{50%{opacity:0}}@keyframes up{from{transform:translateY(12px);opacity:0}}@keyframes fin{from{opacity:0}}@keyframes grow{from{width:0}}
-@media (orientation:landscape) and (max-height:520px){#ov>*{max-width:720px}#ov h2{font-size:20px;margin:2px 0 4px}#ov h3{font-size:15px;margin:6px 0 2px}#ov .card{padding:2px 6px;margin:3px 0;font-size:14px}#ov .card img{width:44px;height:44px;margin:-4px -2px}#ov .card.big img{width:72px;height:72px}}
+@media (orientation:landscape) and (max-height:520px){#ov>*{max-width:720px}#ov>.cgrid,#ov>.row.stk,#ov>.score{max-width:none}#ov .cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));column-gap:12px;align-items:center}#ov h2{font-size:20px;margin:2px 0 4px}#ov h3{font-size:15px;margin:6px 0 2px}#ov .card{padding:2px 6px;margin:3px 0;font-size:14px}#ov .card img{width:44px;height:44px;margin:-4px -2px}#ov .card.big img{width:72px;height:72px}}
 @media (prefers-reduced-motion:reduce){#dlgC .more,#dlg,#ov{animation:none}}
 #panel{position:absolute;left:calc(var(--sl) + 8px);right:calc(var(--sr) + 8px);bottom:calc(var(--sb) + 10px);z-index:4;display:flex;flex-direction:column;gap:6px;max-height:58%;overflow:auto;padding:10px;background:#1d1b26e0;border:2px solid var(--ink);border-radius:8px;box-shadow:inset 0 0 0 2px var(--edge),0 0 0 2px #efe3c833;animation:up .15s}
 .ptitle{font-size:16px;color:var(--gold);text-shadow:1px 1px 0 var(--ink)}
@@ -68,7 +68,7 @@ button.on{background:var(--rust)}
 #ov .sub{font-size:18px;color:#9fc6d6;margin:0 0 22px}#ov .warn{color:#e0552b}#ov .tiny{font-size:13px;color:#b9b2a2;margin-top:14px}
 #ov .title{display:flex;flex-direction:column;gap:12px}#ov .big{font-size:20px;padding:10px}
 #ov input,#ov select{font:inherit;font-size:18px;padding:6px;border:3px solid var(--ink);border-radius:6px;background:var(--paper);color:var(--ink)}#ov input#tl{width:70px}
-#ov .col{display:flex;flex-direction:column;gap:8px}#ov .row{display:flex;gap:8px;margin-top:12px}#ov .row button{flex:1}
+#ov .col{display:flex;flex-direction:column;gap:8px}#ov .cgrid h3{grid-column:1/-1}#ov .row.stk{position:sticky;bottom:calc(-1*var(--sb) - 24px);margin:12px -12px calc(-1*var(--sb) - 24px);padding:8px 12px calc(var(--sb) + 10px);background:linear-gradient(#221f2c00,#221f2cf2 30%);z-index:2}#ov .row{display:flex;gap:8px;margin-top:12px}#ov .row button{flex:1}
 #ov .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 #ov .zb{font-size:15px;border-width:3px;background:#35323f}
 #ov .info{font-size:14px;color:#d8cfbb;margin:2px 0 6px}#ov small{color:#b9b2a2}#ov ul{margin:4px 0;padding-left:20px;font-size:14px}
@@ -1224,8 +1224,8 @@ function questLog(){
 function teamScreen(back,opt){
   opt=opt||{};let sel=-1;
   const draw=()=>OV(()=>`<h2>${opt.title||"Equipo"}</h2><small>Toca dos criaturas para intercambiarlas. 1-5 titulares (el 1 es el portero), 6-8 suplentes.</small>
-  ${S.team.map((c,i)=>`${i===0?"<h3>Titulares</h3>":i===5?"<h3>Suplentes</h3>":""}<div class="slot"><span>${i+1}</span>${card(c,sel===i?"sel":"",i===0&&cPos(c)!=="POR"?"⚠ No es portero":"",Hk(()=>{if(sel<0){sel=i;}else{if(sel!==i){[S.team[sel],S.team[i]]=[S.team[i],S.team[sel]];sfx("menu");}sel=-1;}draw();}))}<button class="mini" onclick="${Hk(()=>detail(c,draw))}">Ver</button></div>`).join("")}
-  ${opt.extra?opt.extra():""}${S.badges?badgeRow():""}<div class="row"><button onclick="${Hk(back)}">${opt.okTxt||"Volver"}</button></div>`);
+  <div class="cgrid">${S.team.map((c,i)=>`${i===0?"<h3>Titulares</h3>":i===5?"<h3>Suplentes</h3>":""}<div class="slot"><span>${i+1}</span>${card(c,sel===i?"sel":"",i===0&&cPos(c)!=="POR"?"⚠ No es portero":"",Hk(()=>{if(sel<0){sel=i;}else{if(sel!==i){[S.team[sel],S.team[i]]=[S.team[i],S.team[sel]];sfx("menu");}sel=-1;}draw();}))}<button class="mini" onclick="${Hk(()=>detail(c,draw))}">Ver</button></div>`).join("")}</div>
+  ${opt.extra?opt.extra():""}${S.badges?badgeRow():""}<div class="row stk"><button onclick="${Hk(back)}">${opt.okTxt||"Volver"}</button></div>`);
   draw();
 }
 function chooseCre(title,list,cb,back,subf){
@@ -1966,9 +1966,9 @@ function endHalf(){
 function halftime(){
   let sel=-1;$("bPause").className="hide";
   const draw=()=>OV(()=>`<h2>Descanso · ${M.abbr[0]} ${M.sc[0]}-${M.sc[1]} ${M.abbr[1]}</h2><small>Cambios restantes: ${M.subs}. Toca un jugador en el campo y luego un suplente. Todos recuperan +30 de energía.</small>
-  <h3>En el campo</h3>${M.pl.filter(p=>p.ti===0).map(p=>card(p.c,sel===p.s?"sel":"",`Energía ${Math.floor(p.en)}`,Hk(()=>{sel=p.s;draw();}))).join("")}
-  <h3>Banquillo</h3>${M.bench[0].length?M.bench[0].map((c,i)=>card(c,"","",Hk(()=>{if(sel<0||M.subs<=0)return;const p=M.pl.find(q=>q.ti===0&&q.s===sel);M.bench[0][i]=p.c;p.c=c;p.en=80;M.played.add(c.id);M.subs--;sel=-1;sfx("menu");draw();}))).join(""):"<small>Sin suplentes.</small>"}
-  <div class="row"><button onclick="${Hk(secondHalf)}">¡Segunda parte!</button></div>`);
+  <div class="cgrid"><h3>En el campo</h3>${M.pl.filter(p=>p.ti===0).map(p=>card(p.c,sel===p.s?"sel":"",`Energía ${Math.floor(p.en)}`,Hk(()=>{sel=p.s;draw();}))).join("")}
+  <h3>Banquillo</h3>${M.bench[0].length?M.bench[0].map((c,i)=>card(c,"","",Hk(()=>{if(sel<0||M.subs<=0)return;const p=M.pl.find(q=>q.ti===0&&q.s===sel);M.bench[0][i]=p.c;p.c=c;p.en=80;M.played.add(c.id);M.subs--;sel=-1;sfx("menu");draw();}))).join(""):"<small>Sin suplentes.</small>"}</div>
+  <div class="row stk"><button onclick="${Hk(secondHalf)}">¡Segunda parte!</button></div>`);
   draw();
 }
 function secondHalf(){ovHide();M.pl.forEach(p=>p.en=Math.min(100,p.en+30));M.half=2;M.t=0;kickoff(1);$("bPause").className="";matchHint();}
@@ -2013,8 +2013,8 @@ function matchResults(){
   const f=ff?0:kind==="amis"||kind==="tut"?(win?30+L*3:draw?20:10):kind==="final"?(win?600:60):(win?60+L*6:20+L*2);S.fichas+=f;
   const res={win,draw,sc:M.sc.slice()},opts=M.opts,R=M.R;
   OV(()=>`<h2>${win?"¡VICTORIA!":draw?"Empate":"Derrota"}</h2><p class="score">${M.abbr[0]} ${M.sc[0]} - ${M.sc[1]} ${M.abbr[1]}${M.pens?`<br><small>Penaltis ${M.pens[0]}-${M.pens[1]}</small>`:""}</p>
-  <p class="info">${ff?"Has abandonado: sin fichas ni experiencia.":`+${f} fichas (total ${S.fichas}) · +${Math.round(xp)} exp a cada jugador`}</p>${played.map((c,i)=>card(c,"",c.lvl>before[i]?`¡Sube de Nv ${before[i]} a ${c.lvl}!`:`Exp ${c.xp-xpFor(c.lvl)}/${lvlNeed(c)}`)).join("")}
-  <div class="row"><button onclick="${Hk(()=>fadeTo(()=>{ovHide();M=null;scene="world";showPad(true);music("world");
+  <p class="info">${ff?"Has abandonado: sin fichas ni experiencia.":`+${f} fichas (total ${S.fichas}) · +${Math.round(xp)} exp a cada jugador`}${M.stats?` · Tiros ${M.stats.sh[0]}-${M.stats.sh[1]}`:""}</p><div class="cgrid">${played.map((c,i)=>card(c,"",c.lvl>before[i]?`¡Sube de Nv ${before[i]} a ${c.lvl}!`:`Exp ${c.xp-xpFor(c.lvl)}/${lvlNeed(c)}`)).join("")}</div>
+  <div class="row stk"><button onclick="${Hk(()=>fadeTo(()=>{ovHide();M=null;scene="world";showPad(true);music("world");
     processEvents(ev,()=>{const done=()=>{save();opts.onEnd&&opts.onEnd(res);};
       if(kind==="amis"&&win&&rnd()<.25){const src=pick(R.cre.slice(1,5)),c=newCre(src.sp,src.lvl,src.rar);return ask(`¡${cName(c)} (Nv ${c.lvl}) del equipo rival quiere unirse a tu club! ¿Aceptas?`,["¡Claro!","No, gracias"],i=>{if(!i)say([`${cName(c)} se une. Va al ${addCre(c)}.`],done);else done();});}
       done();});}))}">Continuar</button></div>`);
@@ -2354,8 +2354,8 @@ function csChoose(){
   if(CS.cut)return cutChoose();
   const SH=CS.SH,mine=SH.sh.ti===0;
   const go=()=>{hidePanel();csGo();};
-  const kStep=()=>{const kp=SH.keeper;if(kp.ti===0){const ts=[...comboOpts(kp,"parada"),...techOpts(kp,"parada")];if(ts.length){const sv=t=>clamp(100-Math.round(shotPct(Object.assign({},SH,{kT:t}),true)),3,97)+"% parar";return chooseTech(`¡Tiro de ${cName(SH.sh.c)}! Tu portero ${cName(kp.c)}:`,ts,`Parada normal · ${sv(null)}`,t=>{SH.kT=t;go();},sv);}}else SH.kT=aiTech(kp,techOpts(kp,"parada"),"parada",SH);go();};
-  const bStep=()=>{const b=SH.blk;if(b){if(b.ti===0){const ts=techOpts(b,"bloqueo");if(ts.length){const sv=t=>clamp(100-Math.round(shotPct(Object.assign({},SH,{bT:t}),true)),3,97)+"% parar";return chooseTech(`¡${cName(b.c)} está en la trayectoria!`,ts,`Bloqueo normal · ${sv(null)}`,t=>{SH.bT=t;kStep();},sv);}}else SH.bT=aiTech(b,techOpts(b,"bloqueo"),"bloqueo",SH);}kStep();};
+  const kStep=()=>{const kp=SH.keeper;if(kp.ti===0){const ts=[...comboOpts(kp,"parada"),...techOpts(kp,"parada")];if(ts.length){const sv=t=>clamp(100-Math.round(shotPct(Object.assign({},SH,{kT:t}),true)),3,97);return csPick(`¡Tiro de ${cName(SH.sh.c)}! Para ${cName(kp.c)}`,ts,"Parada normal","parar",t=>{SH.kT=t;go();},sv,kp);}}else SH.kT=aiTech(kp,techOpts(kp,"parada"),"parada",SH);go();};
+  const bStep=()=>{const b=SH.blk;if(b){if(b.ti===0){const ts=techOpts(b,"bloqueo");if(ts.length){const sv=t=>clamp(100-Math.round(shotPct(Object.assign({},SH,{bT:t}),true)),3,97);return csPick(`¡${cName(b.c)} se cruza en el tiro!`,ts,"Bloqueo normal","parar",t=>{SH.bT=t;kStep();},sv,b);}}else SH.bT=aiTech(b,techOpts(b,"bloqueo"),"bloqueo",SH);}kStep();};
   // Tu tiro: una sola pantalla. Abajo las cartas (tiro normal y cada supertécnica con su %), arriba la portería: eliges carta y lado.
   // Con D (botón super) entra ya marcada la mejor supertécnica que puedas pagar.
   if(mine){const all=avail(SH.sh,"tiro"),cb=comboOpts(SH.sh,"tiro");CS.techs=[null,...cb,...all];
@@ -2411,6 +2411,25 @@ function csAimDraw(){
   else{const pc=`≈${shotPct(SH,true)}%`,hs=TOUCH?"toca un lado":"clic · ← → ↑ ↓ + S",w1=tw(pc,8),x0=Math.round(W/2-(12+w1+4+tw(hs,7))/2); // medido: el texto tiene tamaño mínimo y no escala igual que el lienzo
     ctx.drawImage(iconC("ui_tiro",10),x0,y0+21);txt(pc,x0+12,y0+29,"#f5d142",8,"left");txt(hs,x0+12+w1+4,y0+29,"rgba(255,255,255,.7)",7,"left");}
 }
+// Elección de la supertécnica defensiva (portero, bloqueo o corte) con cartas dentro de la escena, como en tu tiro.
+// DECISIÓN: antes era una lista de botones que tapaba media pantalla. A los 7 s se elige la opción normal.
+function csPick(title,ts,normal,verb,cb,pf,who){hidePanel();CS.pick={title,opts:[null,...ts],normal,verb,cb,pf,who,t:0,h:ts.length?1:0,cards:[]};CS.choosing=true;}
+function csPickGo(i){const P=CS&&CS.pick;if(!P||i<0||i>=P.opts.length)return;const t=P.opts[i];CS.pick=null;if(t)techSfx(t);else tone(660,.05,"square",.04);hap(12);P.cb(t);}
+function csPickDraw(){
+  const P=CS.pick,n=P.opts.length,bh=68,y0=H-SAFE.b-bh,lim=7,sel=P.opts[P.h],col=sel?DATA.tcol[sel.t]||"#f5d142":"#9fc6d6";
+  ctx.fillStyle="rgba(29,27,38,.9)";ctx.fillRect(0,y0,W,bh);ctx.fillStyle=col;ctx.fillRect(0,y0,W,1);ctx.fillRect(0,y0+1,Math.round(W*Math.max(0,1-P.t/lim)),2);
+  // retrato del que defiende y título
+  if(P.who)drawCre(P.who.c,4,y0-34,40,false,{anim:"parada",shadow:false});
+  txt(P.title.toUpperCase(),W/2,y0+15,"#fff",P.title.length>26?7:8,"center",undefined,15);
+  const cw=Math.min(118,Math.floor((W-8)/n)-4),ch=38,x0=Math.round(W/2-(n*(cw+4)-4)/2),cy=y0+25;P.cards=[];
+  P.opts.forEach((t,i)=>{const x=x0+i*(cw+4),on=i===P.h,tc=t?DATA.tcol[t.t]||"#b58ae0":"#e9e2cf",yy=cy-(on?2:0),pc=P.pf(t);
+    ctx.fillStyle=on?"#f5d142":"#1d1b26";ctx.fillRect(x-1,yy-1,cw+2,ch+2);ctx.fillStyle=on?"#3a3350":"#2a2838";ctx.fillRect(x,yy,cw,ch);ctx.fillStyle=tc;ctx.fillRect(x,yy,cw,3);
+    ctx.drawImage(iconC(t?"ui_super":"ui_robar",12),x+3,yy+5);
+    const nm=t?t.n:P.normal,mx=Math.floor((cw-20)/3.6);txt(nm.length>mx?nm.slice(0,mx-1)+"…":nm,x+18,yy+12,"#fff",6,"left","none",9);
+    if(t)txt(t.combo?"COMBINADA":`${"★".repeat(t.lv)} ${t.cost} en.`,x+18,yy+20,"#6ad1c4",5,"left","none",8);
+    txt(`${pc}%`,x+4,yy+33,on?"#f5d142":"#d9d2bd",9,"left","none",12);txt(P.verb,x+cw-4,yy+33,"rgba(255,255,255,.6)",5,"right","none",8);
+    P.cards.push({x,y:yy,w:cw,h:ch,i});});
+}
 function chooseTech(title,ts,normal,cb,pf){panel(`<div class="ptitle">${title}</div><div class="plist"><button onclick="${PH(()=>cb(null))}">${normal}</button>${ts.map(t=>`<button class="${t.combo?"combo":""}" onclick="${PH(()=>cb(t))}">${t.combo?"✦":"★"} ${t.n} <small>${t.combo?"COMBINADA N4 · con "+cName(t.partner.c):"N"+t.lv+" · "+t.cost+" en."}${pf?" · "+pf(t):""}</small></button>`).join("")}</div>`);}
 // ---- Corte: cuando un defensor tuyo llega a un rival peligroso (o pulsas ★ al robar) se abre una transición
 // "¡CORTE IMPORTANTE!" / "¡CORTE VALOR GOL!" para elegir su supertécnica de bloqueo. DECISIÓN: como mucho uno cada 20 s.
@@ -2434,7 +2453,7 @@ function cutStart(d,a){
 function cutChoose(){
   const C=CS.cut,ts=techOpts(C.d,"bloqueo"),go=t=>{hidePanel();cutGo(t);};
   if(!ts.length)return go(null);
-  chooseTech(`¡${C.gol?"CORTE VALOR GOL":"CORTE IMPORTANTE"}! ${cName(C.d.c)} contra ${cName(C.a.c)}:`,ts,`Entrada normal · ${cutPct(null)}%`,go,t=>cutPct(t)+"%");
+  csPick(`${cName(C.d.c)} contra ${cName(C.a.c)}`,ts,"Entrada normal","cortar",go,cutPct,C.d);
 }
 function cutGo(t){
   const C=CS.cut,SH=CS.SH,L=CS.L;CS.choosing=false;SH.bT=t;if(t)C.d.en=Math.max(0,C.d.en-t.cost);
@@ -2508,6 +2527,7 @@ function csUpdate(dt){
   if(!CS)return;partsStep(dt);vfxStep(CS.vf,dt);CS.t+=dt;CS.flash=Math.max(0,CS.flash-dt*3);CS.vib=Math.max(0,CS.vib-dt*1.2);CS.net=Math.max(0,CS.net-dt*.7);CS.shake=Math.max(0,CS.shake-dt);
   if(CS.intro>0){CS.intro-=dt;if(CS.intro<=0)csChoose();return;}
   if(CS.aiming){CS.aiming.t+=dt;if(CS.aiming.t>=((CS.techs||[]).length>1?8:6))csAimPick(CS.aiming.h);return;}
+  if(CS.pick){CS.pick.t+=dt;if(CS.pick.t>=7)csPickGo(CS.pick.h);return;}
   if(CS.choosing||!CS.step)return;
   CS.step.t+=dt;if(CS.step.t>=CS.step.dur){if(CS.step.k==="result"){const d=CS.done,r=CS.res;csEnd2(d,r);return;}csNext();}
 }
@@ -2642,11 +2662,12 @@ function drawCine(){
   if(CS.ball&&!CS.hideBall)bigBall(CS.ball[0],CS.ball[1],CS.ball[2]||0,5,CS.f.glow);
   vfxDraw(CS.vf);partsDraw();
   postFx({skyH:0,lamps:[[.2,.85,.8],[.8,.85,.8],[.5,.65,.9]],lk:5}); // misma luz de la hora que el partido
-  if(CS.cut&&!st)cutDraw(null,0);
+  if(CS.cut&&!st&&!CS.pick)cutDraw(null,0);
   if(CS.flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(1,CS.flash)})`;ctx.fillRect(0,0,W,H);}
   ctx.fillStyle="rgba(29,27,38,.75)";ctx.fillRect(0,SAFE.t,W,13);txt(SH.pen?`PENALTI · ${M.abbr[0]} ${M.P?M.P.sc[0]:0}-${M.P?M.P.sc[1]:0} ${M.abbr[1]}`:`${M.abbr[0]} ${M.sc[0]}-${M.sc[1]} ${M.abbr[1]}`,W/2,SAFE.t+10,"#fff",9,"center");
   if(CS.skippable&&st&&st.k!=="result")txt("Toca para saltar",W-4,H-SAFE.b-6,"rgba(255,255,255,.6)",7,"right");
   if(CS.aiming)csAimDraw();
+  if(CS.pick)csPickDraw();
   ctx.restore();
 }
 // ---- Animaciones de las supertécnicas nuevas ----
@@ -3820,7 +3841,7 @@ $("bSnd").addEventListener("click",()=>{auInit();toggleSound();});
 $("bPause").addEventListener("click",togglePause);
 $("dlg").addEventListener("pointerdown",e=>{if(DQ&&!DQ.ask){e.preventDefault();advance();}});
 let cvDown=false;
-cv.addEventListener("pointerdown",e=>{e.preventDefault();auInit();cvDown=true;PTR.add(e.pointerId);try{cv.setPointerCapture(e.pointerId);}catch(_){}if(scene==="match")mDown(e);else if(scene==="shot"){if(CS&&CS.aiming){const[sx,sy]=mPos(e),cd=(CS.cards||[]).find(c=>sx>=c.x&&sx<c.x+c.w&&sy>=c.y&&sy<c.y+c.h);if(cd)csPickTech(cd.t);else{const z=csZone(sx,sy);if(z){CS.aiming.h=z;csAimPick(z);}}}else csSkip();}else if(scene==="mg")mgInput("dn",e);else if(scene==="feria")feriaIn("dn",e);});
+cv.addEventListener("pointerdown",e=>{e.preventDefault();auInit();cvDown=true;PTR.add(e.pointerId);try{cv.setPointerCapture(e.pointerId);}catch(_){}if(scene==="match")mDown(e);else if(scene==="shot"){if(CS&&CS.pick){const[sx,sy]=mPos(e),cd=CS.pick.cards.find(c=>sx>=c.x&&sx<c.x+c.w&&sy>=c.y-4&&sy<c.y+c.h+4);if(cd){if(CS.pick.h===cd.i||TOUCH)csPickGo(cd.i);else CS.pick.h=cd.i;}}else if(CS&&CS.aiming){const[sx,sy]=mPos(e),cd=(CS.cards||[]).find(c=>sx>=c.x&&sx<c.x+c.w&&sy>=c.y&&sy<c.y+c.h);if(cd)csPickTech(cd.t);else{const z=csZone(sx,sy);if(z){CS.aiming.h=z;csAimPick(z);}}}else csSkip();}else if(scene==="mg")mgInput("dn",e);else if(scene==="feria")feriaIn("dn",e);});
 // Ratón sin pulsar: en el partido el jugador sigue al cursor; en la pantalla de tiro marca la zona.
 cv.addEventListener("pointermove",e=>{if(e.pointerType!=="mouse")return;const p=mPos(e);if(scene==="match"&&M)M.mouse=p;else if(scene==="shot")csAimHover(p[0],p[1]);else if(scene==="feria")feriaIn("hv",e);});
 cv.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse"&&M)M.mouse=null;});
@@ -3842,6 +3863,7 @@ const typing=e=>!!(e.target&&e.target.closest&&e.target.closest("input,select,te
 const uiBtn=e=>!!(e.target&&e.target.closest&&e.target.closest("#ov button,#panel button,#dlg button"));
 addEventListener("keydown",e=>{if(typing(e))return;auInit();if(scene==="match"&&M&&!uiBtn(e)&&matchKey(e)){e.preventDefault();return;}
   if(scene==="feria"&&FG&&!DQ&&!uiBtn(e)){if(!e.repeat)feriaKey(e.key.length===1?e.key.toLowerCase():e.key);e.preventDefault();return;}
+  if(scene==="shot"&&CS&&CS.pick&&!uiBtn(e)){if(!e.repeat){const P=CS.pick,k=e.key;if(/^[1-9]$/.test(k))csPickGo(+k-1);else if(k==="ArrowLeft"||k==="a"||k==="ArrowUp")P.h=(P.h+P.opts.length-1)%P.opts.length;else if(k==="ArrowRight"||k==="d"||k==="ArrowDown")P.h=(P.h+1)%P.opts.length;else if(k==="Enter"||k===" "||k==="s")csPickGo(P.h);}e.preventDefault();return;}
   if(scene==="shot"&&CS&&CS.aiming&&!uiBtn(e)){if(!e.repeat)aimKey(e.key.length===1?e.key.toLowerCase():e.key);e.preventDefault();return;}if(e.key in KM){const d=KM[e.key];if(!held.includes(d))held.push(d);e.preventDefault();}
   else if(e.key==="z"||e.key==="Enter"||e.key===" "){if(e.key!=="z"&&uiBtn(e))return;if(!e.repeat)pressA();e.preventDefault();}
   else if(e.key==="x"||e.key==="Shift"){if(!e.repeat){bT=performance.now();P.run=true;}}
