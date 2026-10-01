@@ -3379,7 +3379,7 @@ function feriaUpdate(dt){if(!FG)return;partsStep(dt);FG.t+=dt;if(FG.prsT>0)FG.pr
 function feriaDraw(){FG.btns=[];ctx.setTransform(1,0,0,1,0,0);FG.def.dr(FG.g);partsDraw();
   if(FG.msg){const m=FG.msg,a=Math.min(1,m.t*3);ctx.globalAlpha=a;const w=Math.min(W-20,tw(m.s,9,14)+24);ctx.fillStyle="rgba(29,27,38,.9)";ctx.fillRect(W/2-w/2,H*.42-12,w,20);ctx.fillStyle=m.c||"#f5d142";ctx.fillRect(W/2-w/2,H*.42-12,w,1);txt(m.s,W/2,H*.42+2,m.c||"#f5d142",9,"center",null,14);ctx.globalAlpha=1;}
   // Salir (arriba a la izquierda)
-  const sb=$("bSnd").getBoundingClientRect(),cr=cv.getBoundingClientRect(),sx=Math.max(SAFE.l+4,(sb.right-cr.left)/cr.width*W+4);fBtn("salir",sx,SAFE.t+4,34,14,"Salir",{col:"#46415a",fg:"#efe3c8",key:"Escape"});}
+  const sb=$("bSnd").getBoundingClientRect(),cr=cv.getBoundingClientRect(),sx=Math.max(SAFE.l+4,(sb.right-cr.left)/cr.width*W+4);fBtn("salir",sx,SAFE.t+4,34,14,"Salir",{col:"#46415a",fg:"#efe3c8",key:"Escape"});FERIA.sr=sx+34;}
 const fMsg=(s,c,t)=>{if(FG)FG.msg={s,c,t:t||1.6};};
 // Botón dibujado en el lienzo. o: col, fg, key (tecla), off (desactivado), lit (parpadea), sz (tamaño de letra)
 function fBtn(id,x,y,w,h,label,o={}){x=Math.round(x);y=Math.round(y);w=Math.round(w);h=Math.round(h);FG.btns.push({id,x,y,w,h,key:o.key,off:o.off});
@@ -4012,6 +4012,99 @@ FERIA.G.gancho={n:"Gancho de feria",d:"Máquina de peluches con física: lleva e
      ["▶ mueve a lo largo","▲ mueve al fondo","Mira la sombra del gancho","Centrado agarra más fuerte","Empujar al hueco también vale"].forEach((s,i)=>txt(s,px+6,my+46+i*14,"#efe3c8",5,"left","none",9));}}
 };
 FERIA.order.push("gancho");
+// ---- Soka-tira (herri kirolak): tu cuadrilla de criaturas contra la de otro barrio ----
+// Habilidad: tira justo en el golpe del ritmo (¡Aupa!). Estrategia: cuando su capitán grita ¡Orain! viene un tirón: AGUANTA clavando los talones.
+// La fuerza sale de la Fuerza de tus cuatro criaturas más fuertes; el aguante se gasta tirando y se recupera aguantando o descansando.
+const SOKA={win:2,beat:.8,time:35,cost:10};
+function sokaTeam(cs){const t=cs.slice().sort((a,b)=>cStat(b,"fue")-cStat(a,"fue")).slice(0,4);return{cre:t,pw:t.reduce((a,c)=>a+cStat(c,"fue"),0)/4};}
+function sokaRivals(){const lv=avgLvl(),zs=DATA.zones.map((z,i)=>i).filter(i=>DATA.zones[i].roster).sort(()=>rnd()-.5).slice(0,3);
+  return[[-2,20,"Fácil"],[1,30,"Media"],[4,45,"Difícil"]].map(([d,pr,nm],k)=>{const z=zs[k%zs.length],T=zoneTeam(z,Math.max(3,lv+d));return{z,name:T.name,kit:T.kit,lv:lv+d,pr,nm,team:sokaTeam(T.cre),ai:k};});}
+// Un tirón por golpe de ritmo: devuelve la calidad según lo cerca del golpe
+// Fuerza relativa de cada cuadrilla (el rival vale 1 más su dificultad; la tuya, tu Fuerza frente a la suya)
+const sokaPw=g=>[clamp(g.me.pw/g.riv.team.pw,.7,1.4),[1,1.32,1.5][g.riv.ai]];
+function sokaJudge(ph){const d=Math.min(ph,1-ph)*SOKA.beat;return d<.07?["¡PERFECTO!",1,"#f5d142"]:d<.15?["BIEN",.7,"#7cc050"]:["A DESTIEMPO",.25,"#e0552b"];}
+FERIA.G.soka={n:"Soka-tira",d:"Herri kirolak: tira al ritmo y aguanta cuando griten ¡Orain! Tus criaturas contra otro barrio.",min:SOKA.cost,
+ ic(g){g.fillStyle="#3f8a35";g.fillRect(0,20,32,12);g.fillStyle="#8a5a30";g.fillRect(0,17,32,3);g.fillStyle="#e0301f";g.fillRect(15,15,2,7);g.fillStyle="#f5c030";g.fillRect(3,8,6,10);g.fillStyle="#4fb0e8";g.fillRect(23,8,6,10);},
+ odds:[`Entrada: ${SOKA.cost} fichas. Al mejor de 3 tiradas; gana quien arrastra el pañuelo ${SOKA.win} metros a su lado.`,"Rival fácil: 20 fichas · medio: 30 · difícil: 45 y su capitán se une a tu equipo.","La fuerza de cada cuadrilla es la media de Fuerza de sus 4 criaturas más fuertes.","Tirón en el golpe (±0,07 s): fuerza completa; ±0,15 s: 70 %; a destiempo: 25 % y gasta más aguante.","Si se acaba el tiempo gana quien tenga el pañuelo de su lado."],
+ init(g){Object.assign(g,{st:"elige",R:sokaRivals(),me:sokaTeam(S.team),prizes:[],t:0,sel:null});},
+ canExit(g){return g.st!=="tira";},exitLines(g){return g.prizes;},
+ start(g,i){const d=FERIA.G.soka,R=g.R[i];if(!feriaPay(SOKA.cost,feriaSt().free>0)){fMsg(feriaWhyNot(SOKA.cost),"#e0552b");return;}g.riv=R;g.sel=i;g.score=[0,0];g.round=0;d.round(g);},
+ round(g){Object.assign(g,{st:"listo",t:0,p:0,v:0,stam:100,rst:100,anch:false,ai:"rest",aiT:1.5+rnd(),combo:0,lastBeat:-1,judge:null,tug:0,rtug:0,res:null,beatN:0,pulled:-1,warn:0});g.round++;},
+ btn(g,id){const d=FERIA.G.soka;if(g.st==="elige"&&id.startsWith("riv"))return d.start(g,+id[3]);if(id==="otra"&&g.st==="fin"){g.R=sokaRivals();g.st="elige";return;}
+   if(id==="tira")d.pull(g);else if(id==="aguanta")g.anch=true;},
+ key(g,k){const d=FERIA.G.soka;if(g.st==="elige"&&"123".includes(k)&&k.length===1)return d.start(g,+k-1);if(k===" "||k==="Enter"){if(g.st==="fin")return d.btn(g,"otra");d.pull(g);}else if(k==="Shift"||k==="ArrowDown"||k==="a")g.anch=true;},
+ keyup(g,k){if(k==="Shift"||k==="ArrowDown"||k==="a")g.anch=false;},
+ pu(g){g.anch=false;},
+ pull(g){if(g.st!=="tira"||g.anch)return;const bi=Math.round(g.t/SOKA.beat);if(bi===g.pulled){g.judge={s:"¡UNO POR GOLPE!",c:"#e0552b",t:.5};return;}g.pulled=bi;
+   const ph=(g.t/SOKA.beat)%1,[s,q,c]=sokaJudge(ph);g.combo=q>=.7?Math.min(8,g.combo+1):0;const st=g.stam/100,pw=sokaPw(g)[0];
+   g.v+=q*(.55+.04*g.combo)*pw*(.35+.65*st);g.stam=Math.max(0,g.stam-(q>=1?5:q>=.7?6:9));g.tug=1;g.judge={s:s+(g.combo>2?" ×"+g.combo:""),c,t:.6};
+   if(!g.fast){q>=1?tone(880,.06,"square",.05):q>=.7?tone(660,.05,"square",.04):tone(200,.08,"sawtooth",.04);noise(.05,.04);}
+   for(let i=0;i<(q>=1?6:2);i++)spawn(g.footX-6-rnd()*30,g.groundY-1,-(10+rnd()*30),-10-rnd()*20,.6,"#9a7a50",2,60);},
+ up(g,dt){const d=FERIA.G.soka;g.t+=dt;if(g.judge&&(g.judge.t-=dt)<=0)g.judge=null;g.tug=Math.max(0,g.tug-dt*3);g.rtug=Math.max(0,g.rtug-dt*3);
+   if(g.st==="listo"&&g.t>2.2){g.st="tira";g.t=0;if(!g.fast){tone(1200,.3,"square",.05);}}
+   if(g.st!=="tira")return;
+   // ritmo: golpe cada SOKA.beat s
+   const bi=Math.floor(g.t/SOKA.beat);if(bi!==g.lastBeat){g.lastBeat=bi;g.beatN++;if(!g.fast)tone(bi%2?330:440,.05,"triangle",.05);
+     // el rival tira en sus golpes cuando está en racha
+     if(g.ai==="burst"){const R=g.riv,q=.75+rnd()*.3,pr=sokaPw(g)[1],rs=g.rst/100;g.v-=q*.55*pr*(.35+.65*rs)*(g.anch?.4:1);g.rst=Math.max(0,g.rst-6);g.rtug=1;g.burstN--;if(!g.fast)noise(.06,.05);if(g.burstN<=0){g.ai="rest";g.aiT=1.2+rnd()*2.2-R.ai*.3;}}}
+   g.aiT-=dt;if(g.ai==="rest"&&g.aiT<=0){g.ai="warn";g.aiT=.55+rnd()*.25-g.riv.ai*.08;g.warn=1;if(!g.fast)tone(520,.15,"sawtooth",.05);}
+   else if(g.ai==="warn"&&g.aiT<=0){g.ai="burst";g.burstN=3+((rnd()*3)|0)+g.riv.ai;g.warn=0;}
+   // fuerzas continuas: peso de los cuerpos, anclaje y cansancio
+   const[me,rv]=sokaPw(g),base=(g.anch?.32:.12)*me*(.5+.5*g.stam/100)-(g.ai==="burst"?.25:.14)*rv*(.5+.5*g.rst/100)*(g.anch?.45:1);
+   g.v+=base*dt;g.v*=1-1.8*dt;g.p+=g.v*dt;
+   g.stam=Math.min(100,g.stam+(g.anch?7:11)*dt);g.rst=Math.min(100,g.rst+(g.ai==="rest"?14:4)*dt);
+   if(g.p>=SOKA.win||g.p<=-SOKA.win||g.t>=SOKA.time)d.endRound(g);},
+ endRound(g){const w=g.p>.02?0:g.p<-.02?1:-1;g.st="res";g.res=w;if(w>=0)g.score[w]++;if(!g.fast){w===0?SFX.gol():w===1?sfx("mal"):tone(400,.2,"triangle",.04);}
+   const done=g.score[0]===2||g.score[1]===2;setTimeout(()=>{if(!FG||FG.g!==g)return;if(done)FERIA.G.soka.finish(g);else FERIA.G.soka.round(g);},g.fast?0:2200);},
+ finish(g){g.st="fin";const won=g.score[0]===2;g.won=won;if(won){const R=g.riv;feriaGain(R.pr);g.prizes.push(`Ganas a la soka-tira a ${R.name}: +${R.pr} fichas.`);if(R.ai===2){const sp=R.team.cre[0].sp;g.prizes.push(feriaCre("n",sp));}}save();},
+ dr(g){const d=FERIA.G.soka,port=H>W;
+   // fondo: cielo, monte, frontón al fondo, valla con público y hierba
+   const sky=ctx.createLinearGradient(0,0,0,H*.45);sky.addColorStop(0,"#7ab8e0");sky.addColorStop(1,"#cfe6f0");ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+   ctx.fillStyle="#5f8a5a";ctx.beginPath();ctx.moveTo(0,H*.36);for(let x=0;x<=W;x+=8)ctx.lineTo(x,H*.3-Math.sin(x*.013)*H*.05-Math.sin(x*.041)*H*.02);ctx.lineTo(W,H*.4);ctx.lineTo(0,H*.4);ctx.fill();
+   fR("#d8ccb0",W*.6,H*.22,W*.3,H*.18);fR("#c4b898",W*.6,H*.22,W*.3,3);fR("#a8402a",W*.62,H*.3,W*.26,2);
+   const gy=Math.round(H*(port?.62:.7));g.groundY=gy;fR("#4f9a40",0,H*.4,W,H);for(let y=H*.4;y<H;y+=6)fR("rgba(0,0,0,.04)",0,y,W,3);
+   // público tras la valla
+   const r=srand(9);for(let x=4;x<W;x+=7){const h=10+r()*5,col=["#b3202a","#2f4a6b","#efe3c8","#3a5a2a","#1d1b26"][r()*5|0],jump=(g.st==="tira"&&Math.abs(g.p)>1.2&&((x+frame)>>3)%3===0)?2:0;fR(col,x,H*.4-h+6-jump,5,h);fR("#f1c9a5",x+1,H*.4-h+2-jump,3,4);if(r()<.35)fR("#1d1b26",x,H*.4-h+1-jump,5,2);}
+   fR("#efe3c8",0,H*.4+4,W,2);fR("#8a6a40",0,H*.4+6,W,3);for(let x=0;x<W;x+=18)fR("#6b4a2a",x,H*.4+2,2,8);
+   if(g.st==="elige"){const pw=Math.min(W-20,port?W-20:420),px=W/2-pw/2;fR("rgba(13,10,18,.88)",px,H*.08,pw,H*(port?.8:.82));txt("SOKA-TIRA",W/2,H*.08+16,"#f5c030",10,"center",null,14);
+     txt(`Tu cuadrilla: ${g.me.cre.map(c=>cName(c)).join(", ")} · Fuerza ${Math.round(g.me.pw)}`,W/2,H*.08+30,"#efe3c8",5,"center","none",8);
+     g.R.forEach((R,i)=>{const y=H*.08+42+i*(port?H*.2:H*.19),bh=port?H*.17:H*.16;fBtn("riv"+i,px+10,y,pw-20,bh,"",{col:["#4f8f3a","#c9891a","#b3202a"][i],key:String(i+1)});
+       R.team.cre.forEach((c,k)=>ctx.drawImage(creImg(c,32,0),px+16+k*Math.min(26,bh),y+bh/2-Math.min(24,bh-6)/2,Math.min(24,bh-6),Math.min(24,bh-6)));
+       const tx2=px+20+4*Math.min(26,bh);txt(`${R.nm}: ${R.name}`,tx2,y+bh*.38,"#fff",7,"left",null,10);txt(`Nv ${R.lv} · Fuerza ${Math.round(R.team.pw)} · premio ${R.pr}${i===2?" + su capitán":""}`,tx2,y+bh*.72,"#1d1b26",5,"left","none",8);});
+     txt(feriaSt().free>0?"Hoy la primera va gratis":`Entrada: ${SOKA.cost} fichas`,W/2,H*.08+H*(port?.8:.82)-8,"#9a8f78",5,"center","none",8);return;}
+   // cuerda y equipos
+   const m=port?Math.min(W*.095,H*.07):Math.min(W*.075,H*.12),cx=W/2+(port?g.p*m*.6:0),rx=cx-g.p*m,ry=gy-Math.round(m*.55);g.footX=rx-m*1.2;
+   fR("rgba(255,255,255,.7)",cx-1,gy-2,2,H-gy);[-1,1].forEach(s=>{fR("rgba(255,255,255,.55)",cx+s*SOKA.win*m-1,gy-2,2,H-gy);});
+   txt("◀ TU LADO",cx-SOKA.win*m,gy+16,"#fff",6,"center",null,9);txt(g.riv?g.riv.name.toUpperCase():"",cx+SOKA.win*m,gy+16,"#fff",5,"center",null,8);
+   const sag=Math.sin(g.t*3)*.6;ctx.strokeStyle="#8a5a30";ctx.lineWidth=Math.max(2,m*.08);ctx.beginPath();ctx.moveTo(rx-m*5,ry+2);ctx.quadraticCurveTo(rx,ry+3+sag,rx+m*5,ry+2);ctx.stroke();
+   ctx.strokeStyle="#c9a070";ctx.lineWidth=1;for(let x=-5;x<5;x+=.25){const px=rx+x*m;ctx.beginPath();ctx.moveTo(px,ry);ctx.lineTo(px+3,ry+3);ctx.stroke();}
+   fR("#e0301f",rx-2,ry,4,m*.35);fR("#ff6a50",rx-2,ry,2,m*.35);// pañuelo
+   const lean=(side,i)=>{const pull=side?g.rtug:g.tug,an=!side&&g.anch;return(an?.55:.28)+pull*.25+(side?g.ai==="warn"?.1:0:0);};
+   [[g.me.cre,0],[g.riv.team.cre,1]].forEach(([cs,side])=>cs.forEach((c,i)=>{const dx=(1.3+i*(port?.85:.95))*m*(side?1:-1),x=rx+dx,a=lean(side,i)*(side?1:-1),z=Math.round(m*(port?1.35:.95)),tired=(side?g.rst:g.stam)<30;
+     ctx.save();ctx.translate(x,gy);ctx.rotate(-a);if(side)ctx.scale(-1,1);ctx.drawImage(creImg(c,32,(frame>>3)&1),-z/2,-z,z,z);ctx.restore();
+     ctx.fillStyle="rgba(0,0,0,.25)";ctx.beginPath();ctx.ellipse(x,gy,z*.4,3,0,0,7);ctx.fill();if(tired&&(frame>>4)%2){const sx=x+(side?-z*.3:z*.3),sy=gy-z*.9+((frame>>2)%4);fR("#8fd0ff",sx,sy,2,3);fR("#cfefff",sx,sy,1,1);}}));
+   // juez
+   fR("#efe3c8",cx-3,gy-m*1.3+4,6,m*.9);fR("#1d1b26",cx-3,gy-m*1.3,6,5);fR("#f1c9a5",cx-2,gy-m*1.3+4,4,4);fR("#e0301f",cx+3,gy-m*1.2-(g.st==="res"?6:0),8,5);
+   // capitán rival gritando
+   if(g.warn){const wx=rx+1.3*m;bigTxt("¡ORAIN!",wx+m*.6,ry-m*1.2,"#ff6a50",10,16);}
+   // HUD: marcador, tiempo, aguante, ritmo
+   const hy=SAFE.t+4,x0=port?Math.max(W/2-70,(FERIA.sr||0)+4):W/2-70,hbw=Math.min(140,W-SAFE.r-4-x0),hc=x0+hbw/2;fR("rgba(29,27,38,.85)",x0,hy,hbw,24);txt(`TIRADA ${Math.min(3,g.round)}/3`,hc,hy+9,"#c9c0a8",5,"center","none",8);txt(`${g.score[0]} - ${g.score[1]}`,hc,hy+20,"#fff",8,"center","none",11);
+   if(g.st==="tira")txt(String(Math.max(0,Math.ceil(SOKA.time-g.t))),x0+hbw-14,hy+18,"#f5d142",7,"center","none",10);
+   const sw=port?Math.min(80,(W-SAFE.l-SAFE.r-24)/2):80,by2=hy+30,bar=(x,v,col,lab)=>{fR("#1d1b26",x,by2,sw,8);fR(col,x+1,by2+1,(sw-2)*v/100,6);txt(lab,x+sw/2,by2+16,"#fff",5,"center",null,8);};bar(port?SAFE.l+8:SAFE.l+40,g.stam,g.stam<30?"#e0552b":"#7cc050",port?"TÚ":"TU AGUANTE");bar(port?W-SAFE.r-8-sw:W-SAFE.r-120,g.rst,"#e9b949",port?"RIVAL":"SU AGUANTE");
+   // barra de ritmo
+   const bw=Math.min(W*.6,260),bx=W/2-bw/2,byy=H-SAFE.b-(port?70:58),ph=(g.t/SOKA.beat)%1;fR("#1d1b26",bx,byy,bw,10);fR("#3a3846",bx+1,byy+1,bw-2,8);
+   const zone=(w,c)=>{fR(c,bx+bw/2-w/2,byy+1,w,8);};zone(bw*.15/SOKA.beat*.5*2,"rgba(124,192,80,.5)");zone(bw*.07/SOKA.beat*.5*2,"rgba(245,209,66,.85)");
+   if(g.st==="tira"){const mx2=bx+bw/2+((ph+.5)%1-.5)*bw;fR("#fff",mx2-1,byy-3,3,16);}
+   if(g.judge)txt(g.judge.s,W/2,byy-6,g.judge.c,7,"center",null,10);
+   if(g.st==="listo")bigTxt(g.t<.8?"¡PREPARADOS!":g.t<1.6?"¡LISTOS!":"¡AUPA!",W/2,H*.3,"#f5d142",14,22);
+   if(g.st==="res")bigTxt(g.res===0?"¡TIRADA PARA TI!":g.res===1?"TIRADA PARA ELLOS":"EMPATE: OTRA",W/2,H*.3,g.res===0?"#f5d142":"#e0552b",12,20);
+   if(g.st==="fin"){bigTxt(g.won?"¡CAMPEONES!":"OTRA VEZ SERÁ",W/2,H*.28,g.won?"#f5c030":"#e0552b",14,22);if(g.won)txt(`+${g.riv.pr} fichas${g.riv.ai===2?" y su capitán se une a ti":""}`,W/2,H*.28+16,"#efe3c8",7,"center",null,10);}
+   // botones
+   const bh=port?28:22,by=H-SAFE.b-bh-6,gw=Math.min(W-16,port?W-16:300);
+   if(g.st==="fin")fBtn("otra",W/2-gw/2,by,gw,bh,"OTRA (ELIGE RIVAL)",{col:"#2f9a4a",fg:"#fff",key:" "});
+   else{fBtn("aguanta",W/2-gw/2,by,gw*.42,bh,"AGUANTA",{col:g.anch?"#6ad1c4":"#4fb0e8",lit:!!g.warn,key:"a"});fBtn("tira",W/2-gw/2+gw*.46,by,gw*.54,bh,"¡TIRA!",{col:"#e0552b",fg:"#fff",off:g.st!=="tira"||g.anch});}}
+};
+FERIA.order.push("soka");
 $("bSnd").textContent=AU.on?"♪":"✕♪";
 window.G={get E(){return E;},get ROAM(){return ROAM;},get MG2(){return MG2;},get W(){return W;},get H(){return H;},get F(){return{FX0,FX1,FY0,FY1,GCX,MIDY};},get S(){return S;},get M(){return M;},get scene(){return scene;},set HALF(v){HALF=v;},P,DATA,newGame,startMatchFlow,zoneTeam,buildTeam,newCre,addCre,say,testAct,startRecruit};
 // Los sprites PixelLab se decodifican antes del primer dibujo (formImg, human e itemImg los usan de forma síncrona y cachean).
