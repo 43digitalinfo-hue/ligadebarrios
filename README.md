@@ -6,6 +6,22 @@ Juego de navegador: RPG de criaturas con vista cenital y partidos de fútbol arc
 
 Abre `liga-barrios-barakaldo.html` en el navegador. Es un único archivo autocontenido (sprites incluidos); solo la fuente Pixelify Sans se descarga de Google Fonts.
 
+### Parámetros de la URL
+
+- `?debug`: activa el Modo prueba (toca 5 veces el título) y expone `window.G` para depurar. Sin este parámetro no están disponibles.
+- `?hora=N`: fuerza la hora del día (0-23) para probar la luz, el cielo y los focos.
+- `?nofx`: desactiva el postproceso WebGL.
+
+## La Feria
+
+Desde el mapa se entra a la Feria, con juegos de azar, habilidad y estrategia que dan fichas y criaturas (con tope diario y rara asegurada):
+tragaperras de bar, mus con órdago, dados del mentiroso, gancho de feria, sokatira, frontón y chapas en la acera.
+
+## Minijuegos
+
+Los 24 minijuegos de los barrios comparten una capa común: cuenta atrás 3-2-1, puntos flotantes, rachas, sacudida al fallar,
+medalla en directo y aviso en los últimos segundos. Todos tienen escenario y animaciones propias.
+
 ## Contenido
 
 - `liga-barrios-barakaldo.html`: el juego.

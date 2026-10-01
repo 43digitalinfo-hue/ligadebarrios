@@ -63,16 +63,20 @@ Arreglos que salieron al probar:
 - **Modo prueba:** fallaba si se abría sin partida guardada (`computeUnlocked` se ejecutaba antes de generar el mundo).
 - **Bucle de dibujo:** un paso de tiempo negativo podía romper el dibujo del balón. Ahora se limita a 0.
 
+## Tercera tanda: Feria, minijuegos y limpieza
+
+- **Feria nueva:** tragaperras, mus, dados del mentiroso, gancho, sokatira, frontón y chapas. Premios en fichas y criaturas, con tope diario y rara asegurada.
+- **Minijuegos:** capa común de "sensación de juego" (cuenta atrás, puntos flotantes, rachas, medalla en vivo, temblor y destello al fallar) y rediseño visual de los 24.
+  Cambios de jugabilidad: cotillas con límite de 60 s; parejas de mus con unos segundos para memorizar; cangrejo dorado (+3); grúa con bonus de PERFECTO;
+  atasco con arrastre suave; cumbre con suelo de salida, muelles y tablas que se rompen; primer toque más fácil en toques.
+- **Supertécnicas:** tiras de VFX nuevas generadas en el propio juego (ola, tinta, sombra, chispas, rayas, spray, roca, acero, hormigón, sonido, madera, lana, viento y ruedas). Cada tema usa ya la suya.
+- **Poses en el partido:** balanceo al andar, inclinación al chutar o pasar, saltos con giro al celebrar, tambaleo con estrellas al quedar aturdido y estela en la estirada del portero.
+- **Herramientas de prueba:** el Modo prueba y `window.G` solo existen con `?debug` en la URL.
+- **Datos sin uso borrados:** `DATA.missions`, `zones[].missions`, `teams.kuadrillachula` y `teams.remeros`, `story.act1End`, `story.firmasDone` y `story.unlock`, y los campos de estado `a1`, `a2`, `a1Targets`, `firmas` y `ms`. También las funciones `duelScreen`, `shootR` y `winsCount`, que nadie llamaba.
+
 ## Detectado pero sin cambiar: decides tú
 
 - **Balance:** simulé 200 partidos IA contra IA y salen 3,35 goles y 15,6 tiros por partido. El comentario de `BALANCE` dice que está calibrado en unos 2,6 goles y 13 tiros, con un objetivo de 2-3 goles. Para volver a ese rango, se podría bajar `shot.base` de 28 a unos 24 y volver a simular (Modo prueba → "Simular 50 partidos").
-- **Datos que no usa nadie**, restos del sistema de actos anterior:
-  - `DATA.missions` (17 misiones);
-  - `zones[].missions`;
-  - `teams.kuadrillachula` y `teams.remeros`;
-  - `story.act1End`, `story.firmasDone` y `story.unlock`;
-  - los campos de estado `a1`, `a2`, `a1Targets`, `firmas`, `ms` y `capDone`.
-- **Herramientas de prueba a la vista:** el Modo prueba se abre tocando 5 veces el título (da +1000 fichas, permite saltar actos…) y `window.G` queda accesible. Son útiles para depurar, pero conviene quitarlos antes de publicar.
 - **Desierto sin rara especial:** es el único barrio sin entrada en `DATA.specialRare`, porque ninguna de sus criaturas nuevas es rara.
 - **Estadística "fuera":** en la simulación sale siempre 0; los saques de banda prácticamente no ocurren.
 - **Zoom bloqueado:** `user-scalable=no` impide ampliar la página, lo que afecta a la accesibilidad.
@@ -94,5 +98,7 @@ Arreglos que salieron al probar:
 - Los 28 minijuegos aguantan 300 frames con toques aleatorios sin errores.
 - El mapa se dibuja en los 8 barrios y en Lasesarre, con criaturas visibles.
 - Con la ventana a 0×0 ya no hay errores.
+
+- Tercera tanda: carga sin errores con y sin `?debug`; 100 partidos simulados (3,98 goles y 12,4 tiros de media); los 24 minijuegos jugados hasta el final en tres dificultades con toques aleatorios, sin errores; atasco resuelto con arrastre; pruebas de interfaz de frontón (7), chapas (6) y sokatira (6) superadas en escritorio y móvil.
 
 No he hecho una partida humana completa de principio a fin, ni he probado en un móvil real.
