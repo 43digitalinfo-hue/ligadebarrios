@@ -88,6 +88,14 @@ Arreglos que salieron al probar:
 - **Rendimiento:** el mapa se pinta por bloques ya dibujados (solo se redibujan las baldosas animadas); la capa de texto solo borra la zona usada; el postproceso reutiliza memoria. Si el móvil va por debajo de ~25 fps durante 3 s en el mapa o el partido, se desactiva solo el postproceso ("Modo fluido"). Con la CPU frenada ×4, el mapa pasa de 8,7 a 18,5 fps y el partido de 12 a 28 fps.
 - **Prealineación en horizontal:** tarjetas más compactas; los cinco titulares caben sin desplazar.
 
+## Sexta tanda: más espacio, ritmo más tranquilo, portero y cortes
+
+- **Más espacio en el partido (móvil):** el campo ocupa más píxeles y los jugadores se dibujan a 24 px, así que se ven más pequeños respecto al campo (en un móvil de 844×390, el ancho del campo pasa de unas 8,5 a unas 12,5 veces la altura de un jugador). Además, las distancias del juego (presión, entradas, separación) se miden como si el campo fuera un 15 % mayor: hay más hueco entre jugadores.
+- **Ritmo más lento:** los jugadores tardan alrededor de un 15 % más en recorrer el campo. Los pases van un 6 % más lentos, así que da tiempo a pensarlos sin que se los coman. En 100 partidos simulados salen unos 3,1 goles y 9,6 tiros por partido.
+- **Portero:** ya no sale a hacer entradas ni entra en duelos. Se queda en su portería colocándose según el balón, solo recoge balones sueltos dentro del área pequeña y para los tiros.
+- **Supertécnicas del portero y de los defensas:** al elegir la parada o el bloqueo se ve el % de parar con cada opción.
+- **Corte:** cuando un defensor tuyo llega a un rival con balón cerca de tu área, a veces salta una transición "¡CORTE IMPORTANTE!" o, muy cerca de la portería, "¡CORTE VALOR GOL!". Eliges entre la entrada normal y las supertécnicas de bloqueo (cada una con su %). Después se ve la animación de la técnica y "¡CORTE!" o "¡SE ESCAPA!". Pulsando ★ al ir a robar, el defensor con técnica fuerza el corte. Como mucho sale uno cada 20 s.
+
 ## Detectado pero sin cambiar: decides tú
 
 - **Balance:** simulé 200 partidos IA contra IA y salen 3,35 goles y 15,6 tiros por partido. El comentario de `BALANCE` dice que está calibrado en unos 2,6 goles y 13 tiros, con un objetivo de 2-3 goles. Para volver a ese rango, se podría bajar `shot.base` de 28 a unos 24 y volver a simular (Modo prueba → "Simular 50 partidos").

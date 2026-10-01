@@ -8,6 +8,8 @@ Abre `liga-barrios-barakaldo.html` en el navegador. Es un único archivo autocon
 
 En el móvil, el partido se juega con un joystick flotante en la mitad izquierda y botones a la derecha. Si el teléfono lo permite (Android), vibra; se quita en el título, el Menú o la Pausa.
 
+Defendiendo, ★ busca un corte con la supertécnica del defensor. Cerca de tu área, a veces salta solo un "¡CORTE VALOR GOL!" para elegir técnica.
+
 ### Parámetros de la URL
 
 - `?debug`: activa el Modo prueba (toca 5 veces el título) y expone `window.G` para depurar. Sin este parámetro no están disponibles.

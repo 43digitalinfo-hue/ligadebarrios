@@ -250,7 +250,7 @@ const SPRI={},SPRL=Promise.all(Object.keys(SPR).map(k=>new Promise(r=>{const im=
 // DECISIÓN: recalibrado con la simulación IA vs IA (60 partidos por ajuste): ~4,3 goles, ~13 tiros, ~33% de acierto.
 // Antes (2×100 s) salían ~0,9 goles con la mitad de tiempo: base 29→44, lejanía 12→9, IA más rápida (react) y pases más vivos.
 const BALANCE={
-  pace:{spd:1.15,pass:160,carry:.9,recover:1.15},
+  pace:{spd:1.12,pass:172,carry:.9,recover:1.15},
   rain:{p:.25,roll:1.15,passDev:.10,keeper:5,ria:5},                     // txirimiri: el balón rueda más (roll), pases menos precisos, porteros −5 y tipo Ría +5
   shot:{base:44,diff:.6,penBase:55,third:9,press:10,pressR:22,angle:10,techB:[0,15,25,35,40],clash:15,type:10,min:3,max:85,maxTech:92,post:.06,blockNormal:6,catchP:.6},
   intercept:{r:10,base:.12,k:.012,min:.06,max:.65},
@@ -1459,6 +1459,7 @@ function postFx(o){if(NOFX||PERF.low)return;const P=Object.assign(postParams(),{
 // La vista es vertical (móvil en vertical) u horizontal (ordenador o móvil girado, el equipo 0 ataca hacia la derecha).
 // V() pasa de simulación a vista, Vinv() al revés. La vista se dibuja con zoom entero ZM: en pantallas grandes el campo
 // ocupa toda la pantalla sin que los sprites se queden diminutos.
+const ROOM=1.15; // más espacio en el partido: las distancias del juego se miden como en un campo un 15 % mayor
 let ADSPS=[],BOARDS=[],FX0=0,FX1=160,FY0=0,FY1=184,FL=184,FW=160,GX0=62,GX1=98,GCX=80,MIDY=92,SPF=1,PITCH=null,CROWD=null;
 let HOR=false,ZM=1,MW=176,MH=208,PX0=8,PY0=20;
 let HALF=45,M=null; // DECISIÓN: 2 tiempos de 45 s reales (antes 100): partidos cortos y con ritmo; el reloj muestra 0'-40'.
@@ -1530,7 +1531,7 @@ function layoutField(){
   const st=Math.ceil(SAFE.t/ZM),sb=Math.ceil(SAFE.b/ZM),sl=Math.ceil(SAFE.l/ZM),sr=Math.ceil(SAFE.r/ZM);BIG=HOR&&MH>=250;SKY=BIG?30:MH>=200?16:0; // en pantallas pequeñas, franja más baja del cielo (recortada, sin deformar)
   if(HOR){const top=st+(BIG?54:31),bot=sb+(BIG?34:23);FW=Math.max(60,MH-top-bot);FL=Math.floor(Math.min(MW-sl-sr-(BIG?40:28),FW*2.35));PX0=Math.floor(sl+(MW-sl-sr-FL)/2);PY0=top+Math.floor((MH-top-bot-FW)/2);} // DECISIÓN: márgenes algo menores, campo más grande
   else{const top=st+46,bot=sb+36;FL=MH-top-bot;FW=Math.floor(Math.min(MW-22,FL*.62));PX0=Math.floor((MW-FW)/2);PY0=top;}
-  FX0=0;FX1=FW;FY0=0;FY1=FL;GCX=Math.round(FW/2);const gw=Math.round(FW*.23);GX0=GCX-(gw>>1);GX1=GX0+gw;MIDY=Math.round(FL/2);SPF=clamp(FL/184,1,3.5);PS=FW>=(TOUCH?300:220)?32:24;
+  FX0=0;FX1=FW;FY0=0;FY1=FL;GCX=Math.round(FW/2);const gw=Math.round(FW*.23);GX0=GCX-(gw>>1);GX1=GX0+gw;MIDY=Math.round(FL/2);SPF=clamp(FL/(184*ROOM),1,4);PS=TOUCH?24:FW>=220?32:24;
   buildPitch();PITCH.w0=W;PITCH.h0=H;if(M)buildCrowd(M.kit);
 }
 // Rectángulo en coordenadas de simulación dibujado en un contexto de vista.
@@ -1668,9 +1669,9 @@ function matchBegin2(R,opts){
 }
 function keeperGoal(k){
   const B=M.ball,gy=ownY(k.ti),out=fdir(k.ti),c=B.owner,tg=B.pass?[B.pass.tx,B.pass.ty]:[B.x,B.y];
-  if(!c&&inArea(tg[0],tg[1],gy)){const o=nearest(M.pl.filter(q=>q.ti!==k.ti),tg[0],tg[1]);if(!o||dist(o.x,o.y,tg[0],tg[1])>dist(k.x,k.y,tg[0],tg[1])*.8)return tg;}
-  if(c&&c.ti!==k.ti&&Math.abs(c.y-gy)<FL*.22&&!M.pl.some(q=>q.ti===k.ti&&q.s!==0&&Math.abs(q.y-gy)<Math.abs(c.y-gy)&&Math.abs(q.x-c.x)<22*SPF))return[c.x,c.y];
-  const dx=B.x-GCX,dy=(B.y-gy)*out,d=Math.hypot(dx,dy)||1,off=Math.min(14*SPF,d*.2);
+  // DECISIÓN: el portero no sale a hacer entradas; solo recoge balones sueltos dentro del área pequeña y se coloca en su portería
+  if(!c&&Math.abs(tg[1]-gy)<FL*.085&&Math.abs(tg[0]-GCX)<(GX1-GX0)*.85){const o=nearest(M.pl.filter(q=>q.ti!==k.ti),tg[0],tg[1]);if(!o||dist(o.x,o.y,tg[0],tg[1])>dist(k.x,k.y,tg[0],tg[1])*.8)return tg;}
+  const dx=B.x-GCX,dy=(B.y-gy)*out,d=Math.hypot(dx,dy)||1,off=Math.min(9*SPF,d*.15);
   return[clamp(GCX+dx/d*off,GX0+3,GX1-3),gy+out*Math.max(5*SPF,dy/d*off)];
 }
 function homePos(p){
@@ -1770,7 +1771,7 @@ function updCtrl(){
 function movePlayers(dt){
   const kb=kbOn()?M.kb:null,sep=9*SPF;
   M.pl.forEach(p=>{
-    p.mvT=Math.max(0,(p.mvT||0)-dt);p.kick=Math.max(0,(p.kick||0)-dt);p.imm=Math.max(0,p.imm-dt);p.dash=Math.max(0,(p.dash||0)-dt);p.dcd=Math.max(0,(p.dcd||0)-dt);p.vx=p.vx||0;p.vy=p.vy||0;
+    p.mvT=Math.max(0,(p.mvT||0)-dt);p.kick=Math.max(0,(p.kick||0)-dt);p.imm=Math.max(0,p.imm-dt);p.dash=Math.max(0,(p.dash||0)-dt);p.dcd=Math.max(0,(p.dcd||0)-dt);p.wantCut=Math.max(0,(p.wantCut||0)-dt);p.vx=p.vx||0;p.vy=p.vy||0;
     if(p.stun>0){p.stun-=dt;p.vx*=.85;p.vy*=.85;p.x=clamp(p.x+p.vx*dt,3,FW-3);p.y=clamp(p.y+p.vy*dt,3,FL-3);return;}
     let dx=0,dy=0,want=0;const sp=pSpeed(p)*(p.dash>0?1.9:1);
     if(p.dash>0&&p.dashT&&p.dashT.stun<=0){const d=dist(p.x,p.y,p.dashT.x,p.dashT.y)||1;dx=(p.dashT.x-p.x)/d;dy=(p.dashT.y-p.y)/d;want=sp;}
@@ -1818,9 +1819,11 @@ function applyDuel(mine,theirs,win){
 // DECISIÓN: antes cada roce abría la pantalla de duelo (~80 por partido). Ahora el duelo se resuelve solo en el campo con la mejor acción
 // (mismas stats y tipos). DECISIÓN: ya no se abre ninguna pantalla en mitad del partido; la entrada (K / TIRO sin balón) da +12 %.
 function duelCheck(dt){
+  M.cutCD=Math.max(0,(M.cutCD||0)-dt);
   if(M.cd>0){M.cd-=dt;return;}
-  const c=M.ball.owner;if(!c||c.stun>0||c.imm>0||(c.s===0&&c.hold>0))return;
-  const f=M.pl.find(q=>q.ti!==c.ti&&q.stun<=0&&q.imm<=0&&dist(q.x,q.y,c.x,c.y)<Math.max(9,5*SPF+3));if(!f)return; // el radio crece con el campo: el defensor presiona a 5·SPF y en pantallas grandes nunca llegaba a entrar
+  const c=M.ball.owner;if(!c||c.stun>0||c.imm>0||c.s===0)return;
+  const f=M.pl.find(q=>q.ti!==c.ti&&q.s!==0&&q.stun<=0&&q.imm<=0&&dist(q.x,q.y,c.x,c.y)<Math.max(9,5*SPF+3));if(!f)return; // el radio crece con el campo: el defensor presiona a 5·SPF y en pantallas grandes nunca llegaba a entrar
+  if(!M.sim&&c.ti===1&&cutOk(f,c))return cutStart(f,c);
   const mine=c.ti===0?c:f,theirs=c.ti===0?f:c;M.stats.duel++;
   const acts=c.ti===0?[["Regate","reg","def"],["Carga","fue","fue"]]:[["Entrada","def","reg"],["Carga","fue","fue"]];
   const tk=mine!==c&&mine.dash>0,best=acts.map(([n,x,y])=>[tk?"Entrada":n,clamp(duelProb(mine.c,theirs.c,tk?"def":x,tk?"reg":y)+(tk?12:0),10,92)]).sort((a,b)=>b[1]-a[1])[0];
@@ -2180,7 +2183,7 @@ function matchAct(a,aim){
   if(M.state==="kick"&&M.kickTeam===0){M.state="play";whistle();}
   if(M.state!=="play")return;
   const c=M.ball.owner,dir=nrm(aim||M.aim||[0,-1]);
-  if(!(c&&c.ti===0)){if(a!=="pass")tackle();return;}
+  if(!(c&&c.ti===0)){if(a!=="pass"){tackle();if(a==="super"&&M.ctrl)M.ctrl.wantCut=1.2;}return;}
   if(c.s===0)return a==="pass"?userPass(c,dir):kickBall(c,dir);
   if(a==="pass")return userPass(c,dir);
   if(dist(c.x,c.y,GCX,0)<=shotRange())return startShot(c,a==="super");
@@ -2329,10 +2332,11 @@ const csTechOk=t=>!t||!!t.combo||CS.SH.sh.en>=t.cost;
 function csPickTech(t){const A=CS&&CS.aiming;if(!A)return;if(!csTechOk(t)){tone(160,.12,"square",.05);return;}if(CS.SH.tT===t)return;CS.SH.tT=t;A.t=0;if(t)techSfx(t);else tone(660,.05,"square",.04);}
 function csCycleTech(d){const T=CS.techs||[null],ok=T.filter(csTechOk);if(ok.length<2)return;const i=ok.indexOf(CS.SH.tT);csPickTech(ok[(i+d+ok.length)%ok.length]);}
 function csChoose(){
+  if(CS.cut)return cutChoose();
   const SH=CS.SH,mine=SH.sh.ti===0;
   const go=()=>{hidePanel();csGo();};
-  const kStep=()=>{const kp=SH.keeper;if(kp.ti===0){const ts=[...comboOpts(kp,"parada"),...techOpts(kp,"parada")];if(ts.length)return chooseTech(`¡Tiro de ${cName(SH.sh.c)}! Tu portero ${cName(kp.c)}:`,ts,"Parada normal",t=>{SH.kT=t;go();});}else SH.kT=aiTech(kp,techOpts(kp,"parada"),"parada",SH);go();};
-  const bStep=()=>{const b=SH.blk;if(b){if(b.ti===0){const ts=techOpts(b,"bloqueo");if(ts.length)return chooseTech(`¡${cName(b.c)} está en la trayectoria!`,ts,"Bloqueo normal",t=>{SH.bT=t;kStep();});}else SH.bT=aiTech(b,techOpts(b,"bloqueo"),"bloqueo",SH);}kStep();};
+  const kStep=()=>{const kp=SH.keeper;if(kp.ti===0){const ts=[...comboOpts(kp,"parada"),...techOpts(kp,"parada")];if(ts.length){const sv=t=>clamp(100-Math.round(shotPct(Object.assign({},SH,{kT:t}),true)),3,97)+"% parar";return chooseTech(`¡Tiro de ${cName(SH.sh.c)}! Tu portero ${cName(kp.c)}:`,ts,`Parada normal · ${sv(null)}`,t=>{SH.kT=t;go();},sv);}}else SH.kT=aiTech(kp,techOpts(kp,"parada"),"parada",SH);go();};
+  const bStep=()=>{const b=SH.blk;if(b){if(b.ti===0){const ts=techOpts(b,"bloqueo");if(ts.length){const sv=t=>clamp(100-Math.round(shotPct(Object.assign({},SH,{bT:t}),true)),3,97)+"% parar";return chooseTech(`¡${cName(b.c)} está en la trayectoria!`,ts,`Bloqueo normal · ${sv(null)}`,t=>{SH.bT=t;kStep();},sv);}}else SH.bT=aiTech(b,techOpts(b,"bloqueo"),"bloqueo",SH);}kStep();};
   // Tu tiro: una sola pantalla. Abajo las cartas (tiro normal y cada supertécnica con su %), arriba la portería: eliges carta y lado.
   // Con D (botón super) entra ya marcada la mejor supertécnica que puedas pagar.
   if(mine){const all=avail(SH.sh,"tiro"),cb=comboOpts(SH.sh,"tiro");CS.techs=[null,...cb,...all];
@@ -2388,7 +2392,60 @@ function csAimDraw(){
   else{const pc=`≈${shotPct(SH,true)}%`,hs=TOUCH?"toca un lado":"clic · ← → ↑ ↓ + S",w1=tw(pc,8),x0=Math.round(W/2-(12+w1+4+tw(hs,7))/2); // medido: el texto tiene tamaño mínimo y no escala igual que el lienzo
     ctx.drawImage(iconC("ui_tiro",10),x0,y0+21);txt(pc,x0+12,y0+29,"#f5d142",8,"left");txt(hs,x0+12+w1+4,y0+29,"rgba(255,255,255,.7)",7,"left");}
 }
-function chooseTech(title,ts,normal,cb){panel(`<div class="ptitle">${title}</div><div class="plist"><button onclick="${PH(()=>cb(null))}">${normal}</button>${ts.map(t=>`<button class="${t.combo?"combo":""}" onclick="${PH(()=>cb(t))}">${t.combo?"✦":"★"} ${t.n} <small>${t.combo?"COMBINADA N4 · con "+cName(t.partner.c):"N"+t.lv+" · "+t.cost+" en."}</small></button>`).join("")}</div>`);}
+function chooseTech(title,ts,normal,cb,pf){panel(`<div class="ptitle">${title}</div><div class="plist"><button onclick="${PH(()=>cb(null))}">${normal}</button>${ts.map(t=>`<button class="${t.combo?"combo":""}" onclick="${PH(()=>cb(t))}">${t.combo?"✦":"★"} ${t.n} <small>${t.combo?"COMBINADA N4 · con "+cName(t.partner.c):"N"+t.lv+" · "+t.cost+" en."}${pf?" · "+pf(t):""}</small></button>`).join("")}</div>`);}
+// ---- Corte: cuando un defensor tuyo llega a un rival peligroso (o pulsas ★ al robar) se abre una transición
+// "¡CORTE IMPORTANTE!" / "¡CORTE VALOR GOL!" para elegir su supertécnica de bloqueo. DECISIÓN: como mucho uno cada 20 s.
+const cutPct=t=>{const C=CS.cut;return clamp(duelProb(C.d.c,C.a.c,"def","reg")+12+(t?BALANCE.shot.techB[t.lv]:0),10,95);};
+function cutOk(d,a){
+  if(M.state!=="play"||d.ti!==0||d.s===0||M.cutCD>0)return false;
+  const dg=dist(a.x,a.y,GCX,ownY(0)),ts=techOpts(d,"bloqueo");
+  if(d.wantCut>0&&ts.length)return true;
+  if(dg>FL*.42)return false;
+  if(ts.length)return rnd()<(dg<FL*.26?.8:.45);
+  return dg<FL*.24&&rnd()<.35;
+}
+function cutStart(d,a){
+  M.cutCD=20;M.state="shot";d.wantCut=0;const gy=ownY(0),gol=dist(a.x,a.y,GCX,gy)<FL*.26||inArea(a.x,a.y,gy);
+  for(const p of PP)p.l=0;if(MSC&&TOUCH&&!CSZ){CSZ=true;resize();}
+  const SH={sh:a,keeper:M.pl.find(p=>p.ti===0&&p.s===0),blk:d,tT:null,bT:null,kT:null,gy},L=csL();
+  CS={cut:{gol,a,d},SH,L,done:r=>cutEnd(d,a,r),t:0,intro:1.4,seq:[],i:-1,step:null,res:null,ball:[L.sx+10,L.sy+4,0],net:0,vib:0,hideS:false,dive:0,flash:1,shake:.35,f:{},choosing:true,shown:[],vf:[]};
+  scene="shot";hidePanel();mpadShow(false);sfx("duelo");hap([30,40,30,40,60]);
+  techRing(L.blx,L.bly-14,gol?"#e0552b":"#f5d142",120,.6);
+}
+function cutChoose(){
+  const C=CS.cut,ts=techOpts(C.d,"bloqueo"),go=t=>{hidePanel();cutGo(t);};
+  if(!ts.length)return go(null);
+  chooseTech(`¡${C.gol?"CORTE VALOR GOL":"CORTE IMPORTANTE"}! ${cName(C.d.c)} contra ${cName(C.a.c)}:`,ts,`Entrada normal · ${cutPct(null)}%`,go,t=>cutPct(t)+"%");
+}
+function cutGo(t){
+  const C=CS.cut,SH=CS.SH,L=CS.L;CS.choosing=false;SH.bT=t;if(t)C.d.en=Math.max(0,C.d.en-t.cost);
+  CS.res=rnd()*100<cutPct(t)?"corte":"escapa";Object.assign(CS,{x0:L.sx+10,y0:L.sy+4,tx:L.blx,ty:L.bly-14});
+  if(t){CS.seq.push({k:"prep",who:C.d,tk:t,dur:.8},{k:"dexec",tk:t,who:C.d,dur:1.1});txema("tec",{c:cName(C.d.c)},true);}else CS.seq.push({k:"cnormal",dur:.8});
+  CS.seq.push({k:"cres",dur:1.4});CS.skippable=!t||!!(S.techSeen&&S.techSeen[t.n]);csNext();
+}
+function cutEnd(d,a,r){
+  M.state="play";M.stats.duel++;applyDuel(d,a,r==="corte");
+  M.pops.push({x:d.x,y:d.y,t:1.4,s:r==="corte"?"¡Corte!":"Se escapa",c:r==="corte"?"#7cc050":"#e0552b"});
+}
+function cutDraw(st,k){
+  const C=CS.cut,L=CS.L;
+  if(!st){// transición: franja con el aviso y los dos protagonistas cara a cara
+    const e=ease(Math.min(1,CS.t/.35)),col=C.gol?"#e0552b":"#f5d142",y=Math.round(H*.36),hh=56;
+    ctx.fillStyle="rgba(14,12,22,.45)";ctx.fillRect(0,0,W,H);techRays(W/2,y+hh/2,col,CS.t*1.4,12,.25);
+    ctx.save();ctx.translate(Math.round((1-e)*-W),0);ctx.fillStyle="rgba(20,18,30,.92)";ctx.beginPath();ctx.moveTo(0,y+8);ctx.lineTo(W,y-8);ctx.lineTo(W,y+hh-8);ctx.lineTo(0,y+hh+8);ctx.fill();
+    ctx.fillStyle=col;ctx.fillRect(0,y+4,W,2);ctx.fillRect(0,y+hh-4,W,2);ctx.restore();
+    const sz=48,sl=Math.round((1-e)*W*.4);drawCre(C.d.c,8-sl,y+hh/2-sz/2-4,sz,false,{anim:"idle",shadow:false});drawCre(C.a.c,W-sz-8+sl,y+hh/2-sz/2-4,sz,true,{anim:"tiro",shadow:false});
+    const sc=1+Math.max(0,.2-Math.abs(CS.t-.45))*1.5;bigTxt(C.gol?"¡CORTE VALOR GOL!":"¡CORTE IMPORTANTE!",W/2,y+hh/2-2,"#fff",Math.round((W<300?11:14)*sc),Math.round(28*sc),col);
+    txt(`${cName(C.d.c)} vs ${cName(C.a.c)}`,W/2,y+hh/2+16,col,8,"center");return;}
+  if(st.k==="cnormal"){const run=ease(Math.min(1,k/.7));CS.f.sy=-run*16;CS.ball=[lerp(CS.x0,L.blx-6,run),lerp(CS.y0,L.bly-8,run),0];
+    if(k>.7&&!CS.f.hit){CS.f.hit=1;CS.shake=.35;burst(L.blx,L.bly-12,18,["#fff","#c9b28a"],100,.4,2);sfx("duelo");}}
+  else if(st.k==="cres"){const win=CS.res==="corte",e=ease(Math.min(1,k*1.6));
+    if(win){CS.f.sy=-16+e*24;CS.ball=[L.blx-4,L.bly-8+e*6,Math.sin(e*Math.PI)*8];if(CS.burstAt&&k<.6){const B=CS.burstAt;techRays(B.x,B.y,B.col,CS.t*2,12,.5*(1-k/.6));}}
+    else{CS.f.sy=-16-e*(L.sy-L.bly)*.75;CS.f.bt=e;CS.ball=[L.sx+10,L.sy+4+CS.f.sy,0];}
+    const sc=1+Math.max(0,.3-k),by=H-SAFE.b-60;ctx.fillStyle="rgba(20,18,30,.82)";ctx.fillRect(0,by,W,42);ctx.fillStyle=win?"#7cc050":"#e0552b";ctx.fillRect(0,by,W,2);ctx.fillRect(0,by+40,W,2);
+    bigTxt(win?"¡CORTE!":"¡SE ESCAPA!",W/2,by+16,win?"#7cc050":"#e0552b",Math.round(18*sc));
+    txt(win?(C.gol?"¡Corte valor gol!":"¡Corte importante!"):`${cName(C.a.c)} se va de ${cName(C.d.c)}`,W/2,by+34,"#fff",9,"center");}
+}
 function csGo(){
   const SH=CS.SH,L=CS.L;CS.choosing=false;spendTech(SH);const res=CS.res=rollShot(SH);
   let tx=L.gx+L.gw*(rnd()<.5?.16:.84),ty=L.gy+L.gh*.5;
@@ -2417,6 +2474,7 @@ function csNext(){
   if(st.k==="prep")hap([15,25,15,25,40]);
   if(st.k==="combo"){CS.flash=.8;if(!CS.shown.includes(st.tk.n))CS.shown.push(st.tk.n);st.tk.combo.fx.forEach(n=>techSfx({n}));[392,523,659,784,1047].forEach((f,i)=>tone(f,.18,"square",.06,i*.12));if(st.def){CS.bx0=CS.ball?CS.ball[0]:CS.x0;CS.by0=CS.ball?CS.ball[1]:CS.y0;}}
   if(st.k==="dexec"){CS.bx0=CS.ball?CS.ball[0]:CS.x0;CS.by0=CS.ball?CS.ball[1]:CS.y0;}
+  if(st.k==="cres"){const P=[L.blx,L.bly-14];if(CS.res==="corte"){const col=CS.SH.bT?DATA.tcol[CS.SH.bT.t]:"#7cc050";burst(P[0],P[1],30,[col,"#fff","#f5d142"],110,.5,2);CS.shake=.3;CS.flash=.4;sfx("bien");hap([20,30,50]);techRing(P[0],P[1],col,110,.7);techRing(P[0],P[1],"#fff",70,.45);CS.burstAt={x:P[0],y:P[1],col,t:0};}else{sfx("mal");hap([40,30,15]);}}
   if(st.k==="result"){const r=CS.res,SH=CS.SH;CS.ball=CS.ball||[CS.tx,CS.ty,0];
     ({gol:()=>{vfxAdd(CS.vf,"onda",CS.tx,CS.ty,2.5);for(let i=0;i<6;i++)vfxAdd(CS.vf,"confeti",W*(.1+i*.16),H*(.25+rnd()*.3),2+rnd(),i*.1);},parada:()=>vfxAdd(CS.vf,"destello",L.kx,L.ky-18,2.4),despeje:()=>vfxAdd(CS.vf,"impacto",L.kx,L.ky-14,2),bloqueo:()=>vfxAdd(CS.vf,"onda",L.blx,L.bly-14,2.2),poste:()=>vfxAdd(CS.vf,"impacto",CS.tx,CS.ty,1.8)}[r]||(()=>{}))();
     const usedT=SH.tT||SH.kT||SH.bT;if(usedT){const col=DATA.tcol[(usedT.combo?usedT.combo:usedT).t],P=r==="gol"||r==="poste"?[CS.tx,CS.ty]:r==="bloqueo"?[L.blx,L.bly-14]:[L.kx,L.ky-18];techRing(P[0],P[1],col,110,.7);techRing(P[0],P[1],"#fff",70,.45);CS.burstAt={x:P[0],y:P[1],col,t:0};}
@@ -2540,7 +2598,8 @@ function drawCine(){
   if(!CS.hideS)drawCre(SH.sh.c,L.sx-32,L.sy-56+(CS.f.sy||0),64,SH.sh.ti===1,{anim:st&&st.k!=="result"?"tiro":"idle"});
   CS.f.glow=null;CS.hideBall=0;
   if(st){const k=Math.min(1,st.t/st.dur);
-    if(st.k==="normal"){const run=Math.min(1,k/.35);CS.f.sy=-run*10;if(k>=.35&&!CS.f.kick){CS.f.kick=1;sfx("tiro");burst(CS.x0,CS.y0,14,["#fff","#f5d142"],90,.3,2);CS.flash=.35;}
+    if(CS.cut&&(st.k==="cnormal"||st.k==="cres"))cutDraw(st,k);
+    else if(st.k==="normal"){const run=Math.min(1,k/.35);CS.f.sy=-run*10;if(k>=.35&&!CS.f.kick){CS.f.kick=1;sfx("tiro");burst(CS.x0,CS.y0,14,["#fff","#f5d142"],90,.3,2);CS.flash=.35;}
       const e=clamp((k-.35)/.65,0,1);CS.ball=k<.35?[CS.x0,CS.y0,0]:ballPath(e);if(k>.35)spawn(CS.ball[0],CS.ball[1]-CS.ball[2],0,0,.35,"rgba(255,255,255,.8)",3);
       if(k>.5&&CS.res!=="bloqueo")CS.dive=clamp(((CS.kTx??CS.tx)-L.kx)*(k-.5)*2,-L.gw*.45,L.gw*.45)*(CS.res==="gol"&&CS.kTx==null?.6:1);}
     else if(st.k==="exec"){const f=TFX[st.tk.n];if(f)f(k,L);else CS.ball=ballPath(k);if(st.mid&&CS.ball){const b=ballPath(Math.min(k,1)*.55);CS.ball=[b[0],b[1],b[2]];}
@@ -2564,6 +2623,7 @@ function drawCine(){
   if(CS.ball&&!CS.hideBall)bigBall(CS.ball[0],CS.ball[1],CS.ball[2]||0,5,CS.f.glow);
   vfxDraw(CS.vf);partsDraw();
   postFx({skyH:0,lamps:[[.2,.85,.8],[.8,.85,.8],[.5,.65,.9]],lk:5}); // misma luz de la hora que el partido
+  if(CS.cut&&!st)cutDraw(null,0);
   if(CS.flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(1,CS.flash)})`;ctx.fillRect(0,0,W,H);}
   ctx.fillStyle="rgba(29,27,38,.75)";ctx.fillRect(0,SAFE.t,W,13);txt(SH.pen?`PENALTI · ${M.abbr[0]} ${M.P?M.P.sc[0]:0}-${M.P?M.P.sc[1]:0} ${M.abbr[1]}`:`${M.abbr[0]} ${M.sc[0]}-${M.sc[1]} ${M.abbr[1]}`,W/2,SAFE.t+10,"#fff",9,"center");
   if(CS.skippable&&st&&st.k!=="result")txt("Toca para saltar",W-4,H-SAFE.b-6,"rgba(255,255,255,.6)",7,"right");
@@ -3773,7 +3833,7 @@ function resize(){
   const vw=window.innerWidth,vh=window.innerHeight,dpr=window.devicePixelRatio||1;SCALE=Math.max(1,Math.floor(Math.min(vw/180,vh/280)));
   // DECISIÓN: en el partido táctil el lienzo usa píxeles físicos: cada píxel del sprite mide k píxeles físicos (entero, nítido) y el
   // jugador ocupa ~7,5 % del lado corto de la pantalla (antes ~10 %): cámara más alejada, se ve más campo y más jugada.
-  if(MSC&&TOUCH&&dpr>=1.5){const k=Math.max(2,Math.round(Math.min(vw,vh)*(CSZ?.1:.075)*dpr/24));SCALE=k/dpr;}
+  if(MSC&&TOUCH&&dpr>=1.5){const k=Math.max(2,Math.round(Math.min(vw,vh)*(CSZ?.1:.06)*dpr/24));SCALE=k/dpr;}
   txtResize();
   // Mínimo 1×1: con la ventana a 0×0 (pestaña en segundo plano) drawImage del campo lanzaba InvalidStateError en cada frame.
   W=Math.max(1,Math.ceil(vw/SCALE));H=Math.max(1,Math.ceil(vh/SCALE));cv.width=W;cv.height=H;cv.style.width=W*SCALE+"px";cv.style.height=H*SCALE+"px";ctx.imageSmoothingEnabled=false;
