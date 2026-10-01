@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#000000">
 <title>Liga de Barrios de Barakaldo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#1d1b26;--steel:#2e4057;--rust:#c0572b;--ria:#3b7d7a;--paper:#efe3c8;--gold:#e9b949;--edge:#5b5670;--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px)}
 *{box-sizing:border-box}
@@ -100,6 +100,54 @@ button.on{background:var(--rust)}
 .xpbig{height:14px;background:#1d1b26;border-radius:4px;overflow:hidden;margin:8px 0}.xpbig i{display:block;height:100%;background:linear-gradient(#bfe6ff,#4fb0e8 50%,#2f6fb0);transition:width 1.4s ease-out}
 .rwb{font-size:17px;padding:10px;text-align:left}.taste{color:#e9b949!important}
 .credits{text-align:center}.roll p{margin:6px 0;font-size:16px}.champ{color:var(--gold);font-size:20px!important;margin-top:18px!important}
+/* ===== Interfaz HD: tipografía limpia, superficies redondeadas con relieve suave ===== */
+:root{--ui:"Nunito",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--glass:rgba(26,24,38,.86);--line:rgba(255,255,255,.1);--r:16px}
+html,body{font-family:var(--ui);font-weight:700;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+.px{background:var(--glass);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 10px 28px #0008,inset 0 1px 0 #ffffff14;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+button{font-family:var(--ui);font-weight:800;letter-spacing:.2px;background:linear-gradient(180deg,#46617f,#2e4057 60%,#283a50);border:1px solid #ffffff22;border-radius:14px;box-shadow:inset 0 1px 0 #ffffff40,inset 0 -2px 0 #00000033,0 4px 0 #19222f,0 8px 16px #0006;padding:9px 12px;text-shadow:0 1px 2px #0009;transition:transform .08s,box-shadow .08s,filter .12s}
+button:active{transform:translateY(3px);box-shadow:inset 0 1px 0 #ffffff30,0 1px 0 #19222f,0 3px 8px #0006;filter:brightness(1.08)}
+button.on{background:linear-gradient(180deg,#e0784a,#c0572b 60%,#a24620)}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+#dp button{border-radius:18px;background:radial-gradient(circle at 50% 35%,#3a3646,#22202b)}
+#bA{background:radial-gradient(circle at 40% 30%,#ec8a5a,#c0572b 55%,#8e3b18);box-shadow:inset 0 2px 0 #ffffff50,0 6px 16px #0008}
+#bB{background:radial-gradient(circle at 40% 30%,#4a4658,#2a2733 60%,#1c1a24);box-shadow:inset 0 2px 0 #ffffff30,0 6px 16px #0008}
+#bM{background:linear-gradient(180deg,#4f9a96,#3b7d7a 60%,#2e6360);border-radius:999px;padding:7px 14px}
+#bSnd,#bPause{border-radius:999px}
+#mpad button{box-shadow:inset 0 3px 0 #ffffff45,inset 0 -4px 0 #0004,0 6px 16px #0008;border:1px solid #ffffff2a}
+#mS{background:radial-gradient(circle at 40% 30%,#ec8a5a,#c0572b 55%,#8e3b18)}#mP{background:radial-gradient(circle at 40% 30%,#5aa0d0,#2e6f9e 55%,#1d4a6c)}#mX{background:radial-gradient(circle at 40% 30%,#a57ad0,#7b4fa0 55%,#55337a)}
+#dlg{background:linear-gradient(180deg,#fffaf0,#f3e8cf);color:#2a2533;border:none;border-radius:20px;box-shadow:0 14px 36px #000b,inset 0 0 0 1.5px #ffffffb0,inset 0 -3px 0 #e2d2ac;padding:14px 16px 16px;font-size:17px;line-height:1.42;font-weight:700}
+#dlgC .more{color:var(--rust)}
+#panel{background:var(--glass);border:1px solid var(--line);border-radius:22px;box-shadow:0 14px 36px #000a,inset 0 1px 0 #ffffff14;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);padding:12px;gap:8px}
+.ptitle{font-weight:900;font-size:17px;text-shadow:0 1px 3px #0009}
+.hint{font-weight:600;color:#c4bdb0}
+#ov{background:radial-gradient(120% 70% at 50% 0%,#2f2a44f4,#1b1924f6 70%)}
+#ov.clear{background:linear-gradient(#1d1b26ee,#1d1b2699 55%,transparent 75%)}
+#ov h1{font-family:var(--ui);font-weight:900;font-size:48px;letter-spacing:-.5px;color:#ffd35a;background:linear-gradient(180deg,#fff2b0,#ffd35a 45%,#e99a2a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none;filter:drop-shadow(0 3px 0 #a8401c) drop-shadow(0 8px 14px #000c)}
+#ov h2{font-weight:900;font-size:26px;letter-spacing:-.2px;text-shadow:0 2px 6px #000a}
+#ov h3{font-weight:900;letter-spacing:.2px;text-shadow:0 1px 4px #0009}
+#ov .sub{font-weight:700}
+#ov input,#ov select{font-family:var(--ui);font-weight:700;border:2px solid #ffffff30;border-radius:12px;padding:8px 10px;background:#fffaf0;box-shadow:inset 0 2px 4px #0002}
+#ov .zb{background:linear-gradient(180deg,#403c4e,#35323f);border:1px solid #ffffff22}
+#ov .row.stk{background:linear-gradient(#1b192400,#1b1924f4 30%)}
+.card{background:linear-gradient(180deg,#3d3a4c,#312e3d);border:1px solid #ffffff1a;border-radius:16px;box-shadow:0 4px 12px #0006,inset 0 1px 0 #ffffff14;padding:6px 10px;transition:transform .08s,box-shadow .12s}
+.card:active{transform:scale(.985)}
+.card.sel{border-color:var(--gold);background:linear-gradient(180deg,#56505f,#463f52);box-shadow:0 0 0 2px var(--gold),0 6px 16px #0007}
+.card b{font-weight:900}
+.chip{border-radius:999px;padding:1px 8px;font-weight:800;box-shadow:inset 0 -1px 0 #0003,0 1px 2px #0004}
+.mini{border-radius:12px}
+.sb div,.xpb{height:9px;border-radius:999px;box-shadow:inset 0 1px 2px #000a}.sb i,.xpb i{border-radius:999px}
+.item{background:linear-gradient(180deg,#3d3a4c,#312e3d);border:1px solid #ffffff1a;border-radius:16px;box-shadow:0 4px 12px #0006}
+.dx{background:linear-gradient(180deg,#3d3a4c,#312e3d);border:1px solid #ffffff14;border-radius:14px;box-shadow:0 3px 8px #0005;padding:6px 4px}
+#ov .pity{border-radius:999px;border:none;box-shadow:inset 0 1px 3px #000a}
+.xpbig{border-radius:999px;box-shadow:inset 0 1px 3px #000a}.xpbig i{border-radius:999px}
+.dup{border-radius:999px;padding:1px 8px}
+.rain{border-radius:12px;background:linear-gradient(180deg,#36506c,#2e4057)}
+.rw.main{background:linear-gradient(180deg,#62b84e,#3f8f36 60%,#2d6a2a);box-shadow:inset 0 1px 0 #ffffff50,0 0 0 2px #f5d142,0 4px 0 #1f4a1d,0 8px 18px #0007}
+.plist button.combo{box-shadow:inset 0 1px 0 #ffffff40,0 0 0 2px #f5d142,0 4px 0 #1d1b26}
+.score{font-weight:900;text-shadow:0 2px 8px #000a}
+.map{border-radius:18px;overflow:hidden;box-shadow:0 10px 26px #0008}
+.mz{border-radius:12px;font-weight:800}.mz.sel{border-color:#fff;box-shadow:0 0 0 2px #fff,0 0 16px #ffffff80}
+img.hd{image-rendering:auto!important}
 </style>
 </head>
 <body>
@@ -663,8 +711,8 @@ function formImg(form,type,gold,S,fr){
   return CC[key]=c;
 }
 const creImg=(c,S,fr)=>formImg(SPD(c).f[c.stage],cType(c),c.rar==="d",S,fr);
-function creUrl(c){const k=SPD(c).f[c.stage]+cType(c)+(c.rar==="d");return UC[k]||(UC[k]=creImg(c,32).toDataURL());}
-function formUrl(sp){const s=DATA.sp[sp],k=s.f[0]+s.t+"false";return UC[k]||(UC[k]=formImg(s.f[0],s.t,false,32).toDataURL());}
+function creUrl(c){const k=SPD(c).f[c.stage]+cType(c)+(c.rar==="d");return UC[k]||(UC[k]=creHD(creImg(c,32)).toDataURL());}
+function formUrl(sp){const s=DATA.sp[sp],k=s.f[0]+s.t+"false";return UC[k]||(UC[k]=creHD(formImg(s.f[0],s.t,false,32)).toDataURL());}
 function pxEll(cx,cy,rx,ry,col){ctx.fillStyle=col;if(ctx!==CTX0){ctx.beginPath();ctx.ellipse(cx,cy,Math.max(.5,rx+.4),Math.max(.5,ry+.4),0,0,6.2832);ctx.fill();return;}cx=Math.round(cx);cy=Math.round(cy);for(let y=-Math.floor(ry);y<=ry;y++){const w=Math.round(rx*Math.sqrt(Math.max(0,1-(y*y)/(ry*ry))));ctx.fillRect(cx-w,cy+y,w*2,1);}}
 // o: {anim:"idle"|"walk"|"tiro"|"parada", shadow:false}
 // HD: el sprite de píxeles se escala ×8 con Scale2x (EPX) tres veces: bordes redondeados y nítidos, sin desenfoque.
@@ -806,7 +854,7 @@ function chunkO(q,r){if(WCH.map!==MAP)WCH={map:MAP,g:{},o:{}};const k=q+","+r;le
 function tallFront(t,sx,sy){if(t!=='"'&&t!=="^")return;const c=t==="^"?"#2f5a22":"#3f7a30",f=(frame>>3)&1;ctx.fillStyle=c;for(let i=0;i<16;i+=3){ctx.fillRect(sx+i+(f&&i%2),sy+11,1,5);}ctx.fillStyle=t==="^"?"#6a9a4a":"#7cc050";for(let i=1;i<16;i+=3)ctx.fillRect(sx+i,sy+12-(f),1,3);}
 // ---- Capa de texto nítida: canvas a resolución de pantalla × devicePixelRatio, encima del juego ----
 const TXL=$("tx"),tctx=TXL.getContext("2d");let DPR=1;
-const TFONT=px=>`bold ${px}px "Trebuchet MS","Arial Black",Arial,sans-serif`;
+const TFONT=px=>`800 ${px}px "Nunito","Trebuchet MS","Arial Black",Arial,sans-serif`;try{document.fonts&&document.fonts.load("800 16px Nunito");}catch(_){}
 function txtResize(){DPR=window.devicePixelRatio||1;TXD=null;const w=window.innerWidth,h=window.innerHeight;TXL.width=Math.round(w*DPR);TXL.height=Math.round(h*DPR);TXL.style.width=w+"px";TXL.style.height=h+"px";}
 // Capa de texto: solo se borra el rectángulo donde hubo texto el frame anterior (borrar entera la capa a resolución de
 // pantalla, ~3 Mpx en un móvil, cada frame era el mayor coste fijo del dibujo).
@@ -814,6 +862,10 @@ let TXD=null;
 function txDirty(X,Y,w,px,al){const x=al==="center"?X-w/2:al==="right"?X-w:X;if(!TXD)TXD=[x,Y-px*1.25,x+w,Y+px*.5];else{TXD[0]=Math.min(TXD[0],x);TXD[1]=Math.min(TXD[1],Y-px*1.25);TXD[2]=Math.max(TXD[2],x+w);TXD[3]=Math.max(TXD[3],Y+px*.5);}}
 function txtBegin(){tctx.setTransform(1,0,0,1,0,0);if(TXD){const p=12,x=Math.max(0,Math.floor((TXD[0]-p)*DPR)),y=Math.max(0,Math.floor((TXD[1]-p)*DPR));tctx.clearRect(x,y,Math.ceil((TXD[2]+p)*DPR)-x,Math.ceil((TXD[3]+p)*DPR)-y);TXD=null;}
   tctx.setTransform(DPR,0,0,DPR,0,0);tctx.textBaseline="alphabetic";tctx.lineJoin="round";}
+// Caja redondeada nítida en la capa de texto (resolución real), para rótulos sobre el mundo de píxeles.
+function tBox(x,y,w,h,fill,stroke){const[X0,Y0]=mapPt(x,y),[X1,Y1]=mapPt(x+w,y+h),r=(Y1-Y0)/2;tctx.save();tctx.globalAlpha=ctx.globalAlpha;tctx.beginPath();if(tctx.roundRect)tctx.roundRect(X0,Y0,X1-X0,Y1-Y0,r);else tctx.rect(X0,Y0,X1-X0,Y1-Y0);
+  tctx.shadowColor="rgba(0,0,0,.45)";tctx.shadowBlur=r;tctx.shadowOffsetY=r*.25;tctx.fillStyle=fill;tctx.fill();tctx.shadowColor="transparent";if(stroke){tctx.lineWidth=Math.max(1.5,r*.12);tctx.strokeStyle=stroke;tctx.stroke();}tctx.restore();
+  txDirty(X0-r,Y1+r,X1-X0+r*2,(Y1-Y0+r*2)/1.25,"left");}
 function mapPt(x,y){const m=ctx.getTransform(),k=ctx===HDX?1/DPR:SCALE;return[Math.round((m.a*x+m.c*y+m.e)*k),Math.round((m.b*x+m.d*y+m.f)*k)];}
 // En la capa HD el texto escala con el tablero (zoom del minijuego).
 const hdZ=()=>{if(ctx!==HDX)return 1;const m=ctx.getTransform();return Math.hypot(m.a,m.b)/(SCALE*DPR);};
@@ -1161,7 +1213,7 @@ function drawWorld(){
   {const fl=[];for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(MAP[y][x]==="l")fl.push([x*16-cx+9,y*16-cy-1]);const pc=[ppx-cx+8,ppy-cy+6];fl.sort((a,b)=>Math.hypot(a[0]-pc[0],a[1]-pc[1])-Math.hypot(b[0]-pc[0],b[1]-pc[1]));
     postFx({lamps:[[pc[0]/W,pc[1]/H,.55],...fl.slice(0,7).map(([a,b])=>[a/W,(b+10)/H,1])],skyH:0,lk:160,lw:.95,base:.5});
     const n=light().night;if(n>.3){const k=(n-.3)/.7;ctx.globalCompositeOperation="lighter";fl.forEach(([a,b])=>{ctx.fillStyle=`rgba(255,243,176,${k})`;ctx.fillRect(a-2,b-1,4,2);const g=ctx.createRadialGradient(a,b,0,a,b,14);g.addColorStop(0,`rgba(255,230,150,${.45*k})`);g.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.fillRect(a-14,b-14,28,28);});ctx.globalCompositeOperation="source-over";}}
-  if(banner){const a=Math.min(1,banner.f/20),bw=Math.min(W-20,140);ctx.globalAlpha=a;ctx.fillStyle="#1d1b26cc";ctx.fillRect((W-bw)/2,SAFE.t+30,bw,18);ctx.fillStyle="#e9b949";ctx.fillRect((W-bw)/2,SAFE.t+30,bw,1);ctx.fillRect((W-bw)/2,SAFE.t+47,bw,1);txt(banner.t,W/2,SAFE.t+43,"#e9b949",11,"center");ctx.globalAlpha=1;if(--banner.f<=0)banner=null;}
+  if(banner){const a=Math.min(1,banner.f/20),bw=Math.min(W-20,140);ctx.globalAlpha=a;tBox((W-bw)/2,SAFE.t+28,bw,22,"rgba(26,24,38,.86)","rgba(233,185,73,.8)");txt(banner.t,W/2,SAFE.t+43,"#ffd35a",11,"center","none");ctx.globalAlpha=1;if(--banner.f<=0)banner=null;}
 }
 // ================= INTERFAZ =================
 let DQ=null,OVH=[],OVB=null,FX=null,prevScene="world"; // OVB: acción del botón B/Escape en la pantalla actual (null = cerrar el menú)
@@ -1197,7 +1249,7 @@ function processEvents(ev,cb){
 }
 // ---- Tarjetas ----
 const chip=t=>`<span class="chip" style="background:${DATA.tcol[t]}">${t}</span>`;
-function card(c,cls,sub,click){return`<div class="card ${cls||""}" ${click?`onclick="${click}"`:""}><img src="${creUrl(c)}"><div><b>${cName(c)}</b> Nv${c.lvl}<i>${rarTxt(c)}</i><br>${chip(cType(c))} ${DATA.posN[cPos(c)]}${sub?"<br><small>"+sub+"</small>":""}</div></div>`;}
+function card(c,cls,sub,click){return`<div class="card ${cls||""}" ${click?`onclick="${click}"`:""}><img class="hd" src="${creUrl(c)}"><div><b>${cName(c)}</b> Nv${c.lvl}<i>${rarTxt(c)}</i><br>${chip(cType(c))} ${DATA.posN[cPos(c)]}${sub?"<br><small>"+sub+"</small>":""}</div></div>`;}
 function statBars(c){return STK.map(k=>{const v=cStat(c,k);return`<div class="sb"><span>${DATA.statN[k]}</span><div><i style="width:${v}%"></i></div><b>${v}</b></div>`;}).join("");}
 function techList(c){const t=cTechs(c);return t.length?t.map(x=>`<div class="tech">★ ${x.n} <small>${x.cat} N${x.lv} · ${x.cost} en.</small></div>`).join(""):"<small>Aún no conoce supertécnicas.</small>";}
 function detail(c,back){
@@ -1344,7 +1396,7 @@ function testAct(a,n){
 function ensureGame(){if(!S){newGameQuiet();}}
 function newGameQuiet(){UID=1;S=freshState("Test",0);[newCre("boya",10),newCre("fumon",10),newCre("txandalito",10),newCre("pintada",10),newCre("ladrillo",10),newCre("patin",9)].forEach(addCre);S.act=3;S.tut=5;S.seqI=0;computeUnlocked();startWorld(true);}
 function testAdd(){
-  OV(()=>`<h2>Añadir criatura</h2><p>Nivel: <input id="tl" type="number" value="20" min="1" max="50"> Rareza: <select id="tr"><option value="n">normal</option><option value="r">rara</option><option value="d">dorada</option></select></p><div class="dex">${Object.keys(DATA.sp).map(k=>`<div class="dx" onclick="${Hk(()=>{const c=newCre(k,+$("tl").value||20,$("tr").value);const w=addCre(c);save();say([`${cName(c)} Nv ${c.lvl} añadido al ${w}.`]);})}"><img src="${formUrl(k)}"><small>${DATA.sp[k].n[0]}</small></div>`).join("")}</div><div class="row"><button onclick="${Hk(testMenu)}">Volver</button></div>`);
+  OV(()=>`<h2>Añadir criatura</h2><p>Nivel: <input id="tl" type="number" value="20" min="1" max="50"> Rareza: <select id="tr"><option value="n">normal</option><option value="r">rara</option><option value="d">dorada</option></select></p><div class="dex">${Object.keys(DATA.sp).map(k=>`<div class="dx" onclick="${Hk(()=>{const c=newCre(k,+$("tl").value||20,$("tr").value);const w=addCre(c);save();say([`${cName(c)} Nv ${c.lvl} añadido al ${w}.`]);})}"><img class="hd" src="${formUrl(k)}"><small>${DATA.sp[k].n[0]}</small></div>`).join("")}</div><div class="row"><button onclick="${Hk(testMenu)}">Volver</button></div>`);
 }
 // ================= DUELO (partido y reclutamiento) =================
 let DU=null,RC=null,duelBack="world";
@@ -1698,7 +1750,7 @@ function onResizeMatch(){if(!M)return;const o=[FX0,FY0,FW,FL];layoutField();cons
 function startMatchFlow(R,opts){
   scene="menu";showPad(false);hidePanel();if(opts.rain==null)opts.rain=!opts.noRain&&rnd()<BALANCE.rain.p;R.cre.forEach(c=>albMark(c,1));
   const avg=Math.round(R.cre.slice(0,5).reduce((a,c)=>a+c.lvl,0)/5);
-  teamScreen(()=>matchBegin(R,opts),{title:"Prealineación",okTxt:"¡Al campo!",extra:()=>`<h3>Rival: ${R.name}</h3><small>Nivel medio ${avg} · IA ${["","tranquila","media","agresiva"][R.ai||2]}${S.cana?" · 🍺 Caña activa":""}</small>${opts.rain?`<div class="rain">☁️ <b>Txirimiri</b>: el balón rueda más, pases menos precisos, porteros −5% y las de tipo Ría +5%.</div>`:""}<div class="mini-team">${R.cre.slice(0,5).map(c=>`<img src="${creUrl(c)}" title="${cName(c)}">`).join("")}</div>
+  teamScreen(()=>matchBegin(R,opts),{title:"Prealineación",okTxt:"¡Al campo!",extra:()=>`<h3>Rival: ${R.name}</h3><small>Nivel medio ${avg} · IA ${["","tranquila","media","agresiva"][R.ai||2]}${S.cana?" · 🍺 Caña activa":""}</small>${opts.rain?`<div class="rain">☁️ <b>Txirimiri</b>: el balón rueda más, pases menos precisos, porteros −5% y las de tipo Ría +5%.</div>`:""}<div class="mini-team">${R.cre.slice(0,5).map(c=>`<img class="hd" src="${creUrl(c)}" title="${cName(c)}">`).join("")}</div>
     <h3>Formación</h3><div class="prow">${Object.keys(DATA.formations).map(f=>`<button class="${S.form===f?"on":""}" onclick="${Hk(()=>{S.form=f;startMatchFlow(R,opts);})}">${DATA.formN[f]}</button>`).join("")}</div>`});
 }
 function mkPl(ti,s,c,en){return{ti,s,c,x:GCX,y:MIDY,goal:null,path:[],stun:0,imm:0,en,hold:0};}
@@ -2912,7 +2964,7 @@ function albumScreen(pi){
   OV(()=>`<div class="albh" style="border-color:${DATA.tcol[pg.t]}"><div><h2>${pg.name}</h2>${chip(pg.t)} <small>${got}/${F.length} · Álbum ${totGot}/${tot}</small></div>${pg.z!==8?bd:""}</div>
   <div class="dex">${F.map(f=>{const s=DATA.sp[f.sp],v=S.alb[f.k]||0,name=s.n[f.st];const b=s.b;
     const ta=(S.tastes||{})[f.sp]||{},likes=Object.keys(ta).filter(k=>ta[k]==="l").map(k=>DATA.fichaje.food[k][0]),dis=Object.keys(ta).filter(k=>ta[k]==="d").map(k=>DATA.fichaje.food[k][0]);
-    return`<div class="dx ${v===0?"no":v===1?"seen":""} ${v===3?"gold":""}"><img src="${UC[f.k+(v===3?"g":"")]||(UC[f.k+(v===3?"g":"")]=formImg(s.f[f.st],s.t,v===3,32).toDataURL())}"><small>${v?name:"???"}</small>${v>=2?`<br>${chip(s.t)}<br><small>T${b[0]} R${b[1]} D${b[2]} P${b[5]}</small>`:""}${v&&f.st===0&&(likes.length||dis.length)?`<br><small class="taste">${likes.length?"♥ "+likes.join(", "):""}${dis.length?" ✗ "+dis.join(", "):""}</small>`:""}</div>`;}).join("")}</div>
+    return`<div class="dx ${v===0?"no":v===1?"seen":""} ${v===3?"gold":""}"><img class="hd" src="${UC[f.k+(v===3?"g":"")]||(UC[f.k+(v===3?"g":"")]=creHD(formImg(s.f[f.st],s.t,v===3,32)).toDataURL())}"><small>${v?name:"???"}</small>${v>=2?`<br>${chip(s.t)}<br><small>T${b[0]} R${b[1]} D${b[2]} P${b[5]}</small>`:""}${v&&f.st===0&&(likes.length||dis.length)?`<br><small class="taste">${likes.length?"♥ "+likes.join(", "):""}${dis.length?" ✗ "+dis.join(", "):""}</small>`:""}</div>`;}).join("")}</div>
   <div class="row"><button ${pi?"":"disabled"} onclick="${Hk(()=>albumScreen(pi-1))}">◀</button><button onclick="${Hk(mainMenu)}">Menú</button><button onclick="${Hk(()=>albumScreen(pi+1))}">▶</button></div>`);
 }
 function combosScreen(){
