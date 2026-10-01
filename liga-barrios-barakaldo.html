@@ -3391,7 +3391,7 @@ function fHit(x,y){return FG.btns.slice().reverse().find(b=>x>=b.x&&x<b.x+b.w&&y
 function feriaIn(type,e){if(!FG)return;const[x,y]=mPos(e);
   if(type==="dn"){const b=fHit(x,y);if(b){if(b.off){tone(150,.08,"square",.04);return;}FG.prs=b.id;FG.prsT=.12;tone(520,.03,"square",.04);if(b.id==="salir"){if(!FG.def.canExit||FG.def.canExit(FG.g))feriaExit(FG.def.exitLines?FG.def.exitLines(FG.g):null);else fMsg("Termina la jugada primero","#e0552b");return;}FG.def.btn&&FG.def.btn(FG.g,b.id);return;}}
   if(type==="hv"){const b=fHit(x,y);FG.hov=b?b.id:null;}
-  const f=FG.def[type];f&&f(FG.g,x,y,e);}
+  const f=FG.def[{dn:"dn",mv:"mv",up:"pu",hv:"hv"}[type]];f&&f(FG.g,x,y,e);} // "up" del juego es su actualización: el levantar del dedo va a pu
 function feriaKey(k,up){if(!FG)return;if(up){FG.def.keyup&&FG.def.keyup(FG.g,k);return;}
   const b=FG.btns.find(b=>b.key&&(Array.isArray(b.key)?b.key.includes(k):b.key===k));if(b){if(b.off)return;FG.prs=b.id;FG.prsT=.12;if(b.id==="salir"){if(!FG.def.canExit||FG.def.canExit(FG.g))feriaExit(FG.def.exitLines?FG.def.exitLines(FG.g):null);return;}FG.def.btn&&FG.def.btn(FG.g,b.id);return;}
   FG.def.key&&FG.def.key(FG.g,k);}
@@ -3702,12 +3702,15 @@ function musFace(s,e){const k=s+(e||"n");if(MFC[k])return MFC[k];const P=MUSPJ[s
   if(P.long){R(P.h,4,4,16,14);}R(P.sk,6,5,12,13);R(P.sk,5,7,14,9);R(dk,6,17,12,1);
   if(P.long){R(P.h,5,3,14,4);R(P.h,5,5,3,3);}else R(P.h,6,3,12,3);
   if(P.cap){R("#1d1b26",4,2,16,4);R("#2e2d3a",5,1,14,2);R("#1d1b26",11,0,2,1);}
-  const ey=10,eye=(x,cl)=>cl?R("#3a2a1f",x,ey+1,3,1):(R("#fff",x,ey,3,2),R("#1d1b26",x+1,ey,1,2));eye(7,e==="ciego");eye(14,e==="ciego"||e==="guino");
+  const ey=10,eye=(x,cl)=>cl?R("#3a2a1f",x,ey+1,3,1):(R("#fff",x,ey,3,2),R("#1d1b26",x+(e==="mira"?2:1),ey,1,2));eye(7,e==="ciego");eye(14,e==="ciego"||e==="guino");
   const by=e==="cejas"?ey-3:ey-2;R(P.h,7,by,3,1);R(P.h,14,by,3,1);if(e==="enfado"){R(P.h,9,by+1,1,1);R(P.h,14,by+1,1,1);}
   R(dk,11,11,2,3);if(P.mo)R(P.h,8,15,8,1);const my=16;
   if(e==="labio"){R("#8a3a2a",9,my,6,1);R("#fff",10,my,4,1);}else if(e==="lengua"){R("#8a3a2a",9,my,6,1);R("#e06a7a",11,my+1,2,2);}
   else if(e==="torcida"){R("#8a3a2a",9,my,3,1);R("#8a3a2a",12,my-1,4,1);}else if(e==="rie"){R("#5a1f18",9,my,6,2);R("#fff",10,my,4,1);}
   else if(e==="enfado"){R("#8a3a2a",10,my+1,4,1);}else R("#8a3a2a",10,my,4,1);
+  // tics de los dados: mano a la oreja, gota de sudor
+  if(e==="oreja"){R(P.sk,18,7,4,7);R(dk,18,13,4,1);R(dk,19,8,1,4);R(P.sh,19,14,4,6);}
+  if(e==="sudor"){R("#8fd0ff",17,5,2,3);R("#cfefff",17,5,1,1);R("#8fd0ff",17,8,1,1);}
   return MFC[k]=c;}
 FERIA.G.mus={n:"Mus con órdago",d:"Por parejas con señas, envites y órdago. A 30 tantos, 8 reyes.",min:20,
  ic(g){g.fillStyle="#2f7a44";g.fillRect(1,6,30,22);g.drawImage(spCard(12,0,12,18),4,9);g.drawImage(spCard(1,2,12,18),11,8);g.drawImage(spCard(3,1,12,18),18,9);},
@@ -3790,6 +3793,225 @@ FERIA.G.mus={n:"Mus con órdago",d:"Por parejas con señas, envites y órdago. A
 };
 const tw0=s=>tw(s,6,9);
 FERIA.order.push("mus");
+// ---- Dados del mentiroso (cubiletes, a la manera del perudo) ----
+// Cuatro en la mesa (tú y los tres del mus), 3 dados cada uno bajo el cubilete. Se apuesta cuántos dados de una cara hay en TODA la mesa;
+// los unos (pacos) valen como comodín. Cada uno sube la apuesta o grita «¡Mentira!»: se levantan los cubiletes y pierde un dado quien se equivoca.
+// «¡Justo!»: si aciertas el número exacto recuperas un dado; si no, lo pierdes. Cada rival tiene un tic que le delata a menudo cuando farolea.
+const DADT=[null,{e:"oreja",n:"se rasca la oreja"},{e:"mira",n:"aparta la mirada"},{e:"sudor",n:"le cae una gota de sudor"}],DADN=3;
+const DADW=["","uno","dos","tres","cuatro","cinco","seis","siete","ocho","nueve","diez","once","doce"],DADF=["","pacos","doses","treses","cuatros","cincos","seises"];
+const dadTxt=b=>`${DADW[b.q]||b.q} ${b.q===1?["","paco","dos","tres","cuatro","cinco","seis"][b.f]:DADF[b.f]}`;
+// ¿b supera a a? Pasar a pacos: la mitad (redondeando hacia arriba); salir de pacos: el doble más uno
+function dadHi(b,a){if(!a)return b.f!==1;if(a.f!==1&&b.f!==1)return b.q>a.q||b.q===a.q&&b.f>a.f;if(a.f!==1)return b.q>=Math.ceil(a.q/2);if(b.f!==1)return b.q>=a.q*2+1;return b.q>a.q;}
+function dadMinQ(f,a){if(!a)return f===1?0:1;for(let q=1;q<=40;q++)if(dadHi({q,f},a))return q;return 99;}
+const dadCount=(D,f)=>D.reduce((n,d)=>n+(d===f||f!==1&&d===1?1:0),0);
+// Probabilidad de que haya al menos k éxitos en n dados con prob p
+function dadPAtLeast(n,k,p){if(k<=0)return 1;if(k>n)return 0;let s=0,c=1;for(let i=0;i<=n;i++){if(i>0)c=c*(n-i+1)/i;if(i>=k)s+=c*Math.pow(p,i)*Math.pow(1-p,n-i);}return s;}
+function dadPExact(n,k,p){if(k<0||k>n)return 0;let c=1;for(let i=1;i<=k;i++)c=c*(n-i+1)/i;return c*Math.pow(p,k)*Math.pow(1-p,n-k);}
+// Lo que cree el jugador s de una apuesta: sus dados + lo que insinúan las apuestas de los otros en esta ronda
+function dadP(g,s,b,exact){const own=dadCount(g.d[s],b.f),U=g.d.reduce((n,D,i)=>n+(i===s?0:D.length),0),p=b.f===1?1/6:1/3;
+  let hint=0;g.hist.forEach(h=>{if(h.s!==s&&(h.b.f===b.f||h.b.f===1&&b.f!==1))hint+=.35;});hint=Math.min(hint,1.2);
+  const need=b.q-own-Math.round(hint);return exact?dadPExact(U,b.q-own,p):dadPAtLeast(U,need,p);}
+function dadAi(g,s){const a=g.bid,P=MUSPJ[s],mine=[1,2,3,4,5,6].map(f=>dadCount(g.d[s],f));
+  if(a){const pt=dadP(g,s,a);if(pt<.3+(s===3?.06:0)){if(dadP(g,s,a,true)>.42&&rnd()<.5)return{t:"justo"};return{t:"mentira"};}}
+  let C=[];for(let f=1;f<=6;f++){const q0=dadMinQ(f,a);if(q0<1||q0>30)continue;for(const q of [q0,q0+1]){const b={q,f},p=dadP(g,s,b);C.push({b,p,v:p+mine[f]*.08-(q-q0)*.05+(f===1?-.05:0)});}}
+  if(!C.length)return{t:"mentira"};C.sort((x,y)=>y.v-x.v);let pick=C[0];
+  if(rnd()<P.bluff*1.4){const bl=C.filter(c=>c.p>.28&&c.p<.6);if(bl.length)pick=bl[(rnd()*bl.length)|0];}
+  if(a&&pick.p<.3)return{t:"mentira"};return{t:"bid",b:pick.b,bluff:pick.p<.5};}
+const dadH=(g,s)=>s===0&&!g.auto,dadAlive=g=>[0,1,2,3].filter(s=>g.d[s].length>0);
+function dadSay(g,s,t,hot){g.bub[s]={t,l:2.2,hot};if(!g.fast)hot?tone(240,.1,"square",.05):tone(500+s*50,.04,"triangle",.03);}
+function* dadFlow(g){
+  for(;;){const al=dadAlive(g);if(al.length<2||!g.d[0].length&&!g.auto){g.over=true;return;}
+    // agitar cubiletes
+    g.bid=null;g.hist=[];g.rev=null;g.tell=[null,null,null,null];g.bub=[null,null,null,null];g.shake=1;g.ronda++;
+    for(const s of al)g.d[s]=g.d[s].map(()=>1+((rnd()*6)|0));if(!g.fast)for(let i=0;i<9;i++)tone(140+rnd()*160,.025,"square",.03,i*.09);yield .9;g.shake=0;g.d[0].sort((a,b)=>a-b);yield .3;
+    let s=g.turn;while(!g.d[s].length)s=(s+1)%4;
+    for(;;){let a;if(dadH(g,s))a=yield{ask:"apuesta"};else{yield .7+rnd()*.7;a=dadAi(g,s);}
+      if(a.t==="bid"){g.bid=a.b;g.bidBy=s;g.hist.push({s,b:a.b});dadSay(g,s,dadTxt(a.b));
+        if(s!==0){const T=DADT[s];if(rnd()<(a.bluff?.72:.12)){g.tell[s]={e:T.e,n:T.n,t:1.8};g.tells++;}}
+        do s=(s+1)%4;while(!g.d[s].length);continue;}
+      // ¡Mentira! o ¡Justo!: se levantan los cubiletes
+      const b=g.bid,all=[].concat(...g.d),n=dadCount(all,b.f);dadSay(g,s,a.t==="justo"?"¡Justo!":"¡Mentira!",1);yield .8;
+      g.rev={f:b.f,n,shown:0,t:0,by:s,kind:a.t};if(!g.fast)tone(180,.2,"sawtooth",.04,0,90);
+      for(let k=0;k<n;k++){yield .28;g.rev.shown=k+1;if(!g.fast)tone(500+k*60,.05,"square",.04);}yield .9;
+      let lose=-1,gain=-1;if(a.t==="justo"){if(n===b.q)gain=s;else lose=s;}else lose=n>=b.q?s:g.bidBy;
+      if(gain>=0){if(g.d[gain].length<DADN)g.d[gain].push(1);g.rev.msg=`¡Justo! ${MUSPJ[gain].n} recupera un dado`;g.turn=gain;if(!g.fast)SFX.bien();}
+      else{g.d[lose].pop();g.rev.msg=`Hay ${DADW[n]||n} ${DADF[b.f]}${b.f!==1?" (con pacos)":""}: ${lose===0&&!g.auto?"pierdes":"pierde "+MUSPJ[lose].n} un dado`;g.rev.lose=lose;if(lose===0)g.lost++;g.turn=lose;if(!g.fast)(lose===0?sfx("mal"):SFX.bien());
+        if(!g.d[lose].length){g.out.push(lose);g.rev.msg+=lose===0&&!g.auto?" y te quedas fuera":` y se queda fuera`;}}
+      yield 2.4;break;}}}
+// Dado en píxeles (cacheado por cara y tamaño); los pacos llevan el punto rojo
+const DADC={};
+function dadImg(f,z,hl){const k=f+"_"+z+(hl?"h":"");if(DADC[k])return DADC[k];const c=mkC(z,z),g=c.getContext("2d"),R=(col,x,y,w,h)=>{g.fillStyle=col;g.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(w)),Math.max(1,Math.round(h)));};
+  R(hl?"#c9891a":"#1d1b26",1,0,z-2,z);R(hl?"#c9891a":"#1d1b26",0,1,z,z-2);R(hl?"#fff6c0":"#fbf6ea",1,1,z-2,z-2);R(hl?"#f5d142":"#d8d0bc",1,z-3,z-2,2);R(hl?"#f5d142":"#d8d0bc",z-3,1,2,z-2);R("#fff",2,2,z-6,1);
+  const p=Math.max(1,Math.round(z/7)),P={1:[[.5,.5]],2:[[.28,.28],[.72,.72]],3:[[.28,.28],[.5,.5],[.72,.72]],4:[[.28,.28],[.72,.28],[.28,.72],[.72,.72]],5:[[.28,.28],[.72,.28],[.5,.5],[.28,.72],[.72,.72]],6:[[.28,.25],[.72,.25],[.28,.5],[.72,.5],[.28,.75],[.72,.75]]}[f];
+  P.forEach(([u,v])=>{const s=f===1?p*2:p;R(f===1?"#c0392b":"#1d1b26",u*(z-2)-s/2,v*(z-2)-s/2,s,s);});return DADC[k]=c;}
+function dadCup(x,y,w,h,lift,col){const X=Math.round(x),Y=Math.round(y-lift);fR("rgba(0,0,0,.3)",X+3,Math.round(y)+h-3,w,4);
+  const gr=ctx.createLinearGradient(X,0,X+w,0);gr.addColorStop(0,sh(col,.55));gr.addColorStop(.35,sh(col,1.15));gr.addColorStop(1,sh(col,.6));ctx.fillStyle=gr;ctx.beginPath();ctx.moveTo(X+w*.12,Y);ctx.lineTo(X+w*.88,Y);ctx.lineTo(X+w,Y+h);ctx.lineTo(X,Y+h);ctx.closePath();ctx.fill();
+  fR(sh(col,.4),X,Y+h-3,w,3);fR(sh(col,.8),X+w*.12,Y,w*.76,2);for(let i=1;i<3;i++)fR("rgba(0,0,0,.2)",X+w*.06*i,Y+h*.33*i,w-w*.12*i,1);}
+FERIA.G.dados={n:"Dados del mentiroso",d:"Cubiletes y faroles: sube la apuesta o grita ¡mentira! Pilla los tics de cada uno.",min:15,
+ ic(g){g.fillStyle="#6b3a1f";g.beginPath();g.moveTo(5,4);g.lineTo(17,4);g.lineTo(19,22);g.lineTo(3,22);g.fill();g.drawImage(dadImg(5,11),18,18);g.drawImage(dadImg(1,11),10,20);},
+ odds:["Entrada: 15 fichas. Ganar (último con dados): 45 fichas. Quedar segundo: te devuelven las 15.","Ganar habiendo perdido como mucho un dado: además, una criatura común o poco común.","Cada dado sale de 1 a 6 al azar (1 de cada 6). Los pacos (unos) cuentan como cualquier cara salvo cuando se apuesta a pacos.","Tics: cuando un rival farolea, se le escapa su tic el 72 % de las veces; cuando va de verdad, el 12 %.","Txomin se rasca la oreja · Maite aparta la mirada · Patxi suda."],
+ init(g){Object.assign(g,{d:[[],[],[],[]],bub:[null,null,null,null],tell:[null,null,null,null],bid:null,hist:[],rev:null,ask:{ask:"empezar"},it:null,wt:0,over:false,out:[],prizes:[],ronda:0,tells:0,lost:0,turn:(rnd()*4)|0,sel:{q:1,f:2},shake:0});},
+ canExit(){return true;},exitLines(g){return g.prizes.concat(g.it&&!g.over?["Te levantas de la mesa: pierdes la entrada."]:[]);},
+ start(g,free){if(!feriaPay(15,free)){fMsg(feriaWhyNot(15),"#e0552b");return;}const pr=g.prizes;FERIA.G.dados.init(g);g.prizes=pr;g.ask=null;g.d=[0,1,2,3].map(()=>Array(DADN).fill(1));g.it=dadFlow(g);SFX.menu();},
+ fit(g){const a=g.bid,S=g.sel;if(!a&&S.f===1)S.f=2;const m=Math.max(1,dadMinQ(S.f,a));if(S.q<m)S.q=m;const tot=g.d.reduce((n,D)=>n+D.length,0);if(S.q>tot)S.q=Math.max(m,tot);},
+ btn(g,id){const d=FERIA.G.dados,A=g.ask;if(!A)return;
+   if(A.ask==="empezar"||A.ask==="fin"){if(id==="jugar")d.start(g,false);else if(id==="gratis")d.start(g,true);return;}
+   if(A.ask!=="apuesta")return;const S=g.sel;
+   if(id.startsWith("f")){S.f=+id[1];S.q=Math.max(1,dadMinQ(S.f,g.bid));d.fit(g);tone(500+S.f*40,.03,"square",.03);}
+   else if(id==="qm"){if(S.q>Math.max(1,dadMinQ(S.f,g.bid)))S.q--;}else if(id==="qp"){if(S.q<g.d.reduce((n,D)=>n+D.length,0))S.q++;}
+   else if(id==="bid"){if(!dadHi(S,g.bid))return;g.ask=null;g.ans={t:"bid",b:{q:S.q,f:S.f}};}
+   else if(id==="mentira"&&g.bid){g.ask=null;g.ans={t:"mentira"};}else if(id==="justo"&&g.bid){g.ask=null;g.ans={t:"justo"};}},
+ key(g,k){const d=FERIA.G.dados,A=g.ask;if(!A)return;if(A.ask==="empezar"||A.ask==="fin"){if(k===" "||k==="Enter")d.btn(g,feriaSt().free>0?"gratis":"jugar");return;}
+   if("123456".includes(k)&&k.length===1)d.btn(g,"f"+k);else if(k==="ArrowUp"||k==="+")d.btn(g,"qp");else if(k==="ArrowDown"||k==="-")d.btn(g,"qm");else if(k===" "||k==="Enter")d.btn(g,"bid");else if(k==="m")d.btn(g,"mentira");else if(k==="j")d.btn(g,"justo");},
+ up(g,dt){g.bub.forEach((b,i)=>{if(b&&(b.l-=dt)<=0)g.bub[i]=null;});g.tell.forEach((b,i)=>{if(b&&(b.t-=dt)<=0)g.tell[i]=null;});if(g.rev)g.rev.t+=dt;
+   if(!g.it||g.ask)return;if(g.wt>0){g.wt-=dt;return;}const r=g.it.next(g.ans);g.ans=undefined;
+   if(r.done){g.it=null;g.ask={ask:"fin"};const al=dadAlive(g),win=al.length===1&&al[0]===0,second=!win&&g.out[g.out.length-1]===0&&al.length===1;g.place=win?1:second?2:0;
+     if(win){feriaGain(45);g.prizes.push("Ganas a los dados: +45 fichas.");if(g.lost<=1)g.prizes.push(feriaCre("n"));SFX.gol();}else if(second){feriaGain(15);g.prizes.push("Segundo a los dados: recuperas las 15 fichas.");}else sfx("mal");save();return;}
+   const v=r.value;if(typeof v==="number")g.wt=v;else{g.ask=v;if(v.ask==="apuesta"){const own=[1,2,3,4,5,6].map(f=>dadCount(g.d[0],f));g.sel={q:1,f:own.indexOf(Math.max(...own.slice(2)),2)};FERIA.G.dados.fit(g);}}},
+ dr(g){const d=FERIA.G.dados;ctx.drawImage(feriaBarBg(),0,0);fR("rgba(10,8,14,.5)",0,0,W,H);
+   const port=H>W,bH=port?20:18,by=H-SAFE.b-bH-6,tx=port?8:Math.round(W*.16),tw=port?W-16:Math.round(W*.68),ty=SAFE.t+(port?40:26),th=Math.round(by-2*bH-24-ty);
+   feltTable(tx,ty,tw,th);const lg=ctx.createRadialGradient(W/2,ty+th*.5,10,W/2,ty+th*.5,tw*.7);lg.addColorStop(0,"rgba(255,210,140,.22)");lg.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=lg;ctx.fillRect(0,0,W,H);
+   const sc=Math.max(1,Math.round(Math.min(W,H)/150)),fz=22*sc,dz=Math.max(9,Math.round(Math.min(tw/22,13)))*(port?1:1),cupW=dz*3.4,cupH=dz*2.6,cols=["#7a3a1f","#2f4a6b","#7a2a3a","#3a5a2a"];
+   // rivales arriba
+   for(let s=1;s<4;s++){const x=tx+tw*(s*2-1)/6,y=ty+4,alive=g.d[s].length>0,tl=g.tell[s],mood=!alive?"enfado":tl?tl.e:g.rev&&g.rev.lose===s&&g.rev.shown===g.rev.n?"enfado":g.bub[s]&&g.bub[s].hot?"cejas":"n";
+     ctx.globalAlpha=alive?1:.45;fR("rgba(0,0,0,.35)",x-fz/2+2,y+3,fz,fz);ctx.drawImage(musFace(s,mood),Math.round(x-fz/2),y,fz,fz);ctx.globalAlpha=1;
+     txt(MUSPJ[s].n,x,y+fz+7,"#efe3c8",6,"center",null,9);if(tl)txt(`(${tl.n})`,x,y+fz+15,"#ffb070",5,"center",null,8);
+     const cy=y+fz+20,lift=g.rev?Math.min(1,g.rev.t*3)*cupW*1.05:0,n=g.d[s].length;
+     if(g.rev||!alive){for(let i=0;i<n;i++){const v=g.d[s][i],hl=g.rev&&(v===g.rev.f||g.rev.f!==1&&v===1);ctx.drawImage(dadImg(v,dz,hl&&g.rev.shown>0),Math.round(x-n*(dz+1)/2+i*(dz+1)),Math.round(cy+cupH-dz));}}
+     if(alive)dadCup(x-cupW/2+lift+(g.shake?Math.sin(frame*1.7+s)*2:0),cy,cupW,cupH,0,cols[s]);
+     for(let i=0;i<DADN;i++)fR(i<n?"#fbf6ea":"#3a3846",x-DADN*3+i*6,cy+cupH+4,4,4);}
+   // apuesta en el centro
+   const cx=W/2,yy=ty+th-dz-10,my=Math.round((ty+fz+28+cupH+12+yy-16)/2);
+   if(g.bid&&!g.rev){const b=g.bid,iz=dz+4;txt(`${MUSPJ[g.bidBy].n} dice:`,cx,my-iz-4,"#c9c0a8",6,"center",null,9);txt(String(b.q)+" ×",cx-iz/2-2,my+4,"#fff",11,"right",null,14);ctx.drawImage(dadImg(b.f,iz),Math.round(cx-iz/2+4),Math.round(my-iz/2));txt(dadTxt(b).toUpperCase(),cx,my+iz/2+12,"#f5d142",7,"center",null,10);}
+   if(g.rev){const R=g.rev,iz=dz+2;fR("rgba(13,10,18,.85)",cx-110,my-24,220,46);txt(`${R.kind==="justo"?"¿Justo":"¿Hay"} ${dadTxt(g.bid)}?`,cx,my-12,"#c9c0a8",6,"center","none",9);
+     txt(`HAY ${R.shown}`,cx-6,my+6,R.shown>=g.bid.q?"#7cc050":"#fff",10,"right","none",13);ctx.drawImage(dadImg(R.f,iz,true),Math.round(cx+2),Math.round(my-iz/2+2));if(R.msg&&R.shown>=R.n)txt(R.msg,cx,my+18,"#f5d142",5,"center","none",8);}
+   if(!g.bid&&!g.rev&&g.it){txt(`${g.d.reduce((n,D)=>n+D.length,0)} dados en la mesa`,cx,my,"#c9c0a8",6,"center",null,9);}
+   // historial de la ronda
+   if(g.hist.length&&!port){const hx=tx+tw+8;g.hist.slice(-6).forEach((h,i)=>txt(`${MUSPJ[h.s].n}: ${dadTxt(h.b)}`,hx,ty+20+i*10,h.s?"#c9c0a8":"#f5d142",5,"left",null,8));txt("RONDA "+g.ronda,hx,ty+8,"#9a8f78",5,"left",null,8);}
+   // tus dados (levantas el cubilete para mirarlos)
+   const n0=g.d[0].length;
+   if(n0){dadCup(cx-n0*(dz+3)/2-cupW-8,yy+dz-cupH+2,cupW,cupH,0,cols[0]);for(let i=0;i<n0;i++){const v=g.d[0][i],hl=g.rev&&(v===g.rev.f||g.rev.f!==1&&v===1)&&g.rev.shown>0;ctx.drawImage(dadImg(g.shake?1+((frame/3+i*2)|0)%6:v,dz+3,hl),Math.round(cx-n0*(dz+3)/2+i*(dz+4)),Math.round(yy+(g.shake?Math.sin(frame+i)*2:0)));}}
+   for(let i=0;i<DADN;i++)fR(i<n0?"#f5d142":"#3a3846",cx+n0*(dz+3)/2+10+i*6,yy+dz-2,4,4);
+   [0,1,2,3].forEach(s=>{const b=g.bub[s];if(!b)return;const w=tw0(b.t)+10,x=s?tx+tw*(s*2-1)/6+(s===3?-1:1)*(fz/2+4+w/2):cx,y=s?ty+12:yy-8;fR(b.hot?"#fff6d0":"#fbf6ea",x-w/2,y-10,w,13);fR(b.hot?"#e0552b":"#1d1b26",x-w/2,y+2,w,1);txt(b.t,x,y-1,b.hot?"#b3202a":"#1d1b26",6,"center","none",9);});
+   // controles
+   const A=g.ask;
+   if(A&&(A.ask==="empezar"||A.ask==="fin")){const F=feriaSt(),B=F.free>0?["gratis","PARTIDA GRATIS","#7cc050"]:["jugar",A.ask==="fin"?"OTRA (15 FICHAS)":"JUGAR (15 FICHAS)","#2f9a4a"],gw=Math.min(W-16,220);fBtn(B[0],cx-gw/2,by,gw,bH,B[1],{col:B[2],fg:"#fff",key:" "});
+     if(A.ask==="empezar"){const pw=Math.min(tw-16,260),py=my-30;fR("rgba(13,10,18,.88)",cx-pw/2,py,pw,58);txt("DADOS DEL MENTIROSO",cx,py+12,"#f5c030",8,"center",null,12);["3 dados cada uno. Apuesta cuántos hay de una cara en toda la mesa.","Los unos (pacos) valen de comodín. Sube o grita ¡Mentira!","Cada rival tiene un tic que le delata cuando farolea."].forEach((s,i)=>txt(s,cx,py+26+i*10,"#efe3c8",5,"center","none",8));}
+     else{const pl=g.place;fR("rgba(13,10,18,.85)",cx-90,my-20,180,34);bigTxt(pl===1?"¡GANAS!":pl===2?"SEGUNDO":"FUERA",cx,my,pl===1?"#f5c030":pl===2?"#efe3c8":"#e0552b",14,22);txt(pl===1?"+45 fichas"+(g.lost<=1?" y una criatura":""):pl===2?"Recuperas la entrada":"Otra vez será",cx,my+10,"#efe3c8",6,"center",null,9);}}
+   else if(A&&A.ask==="apuesta"){const S=g.sel,ok=dadHi(S,g.bid),fw=Math.min(22,(W-24)/9),r1=by-bH-4;
+     for(let f=1;f<=6;f++){const on=S.f===f,dis=!g.bid&&f===1;fBtn("f"+f,cx-3*(fw+3)+(f-1)*(fw+3),r1,fw,bH,"",{col:on?"#f5c030":"#46415a",off:dis,icon:(x,y,w,h)=>{const z=Math.min(w,h)-4;ctx.drawImage(dadImg(f,z),Math.round(x+w/2-z/2),Math.round(y+h/2-z/2));}});}
+     const gw=Math.min(W-16,port?W-16:340),u=(gw-12)/10,x0=cx-gw/2;
+     fBtn("qm",x0,by,u,bH,"−",{col:"#46415a",fg:"#efe3c8"});txt(String(S.q),x0+u*1.5,by+bH/2+4,"#fff",9,"center",null,12);fBtn("qp",x0+u*2,by,u,bH,"+",{col:"#46415a",fg:"#efe3c8"});
+     fBtn("bid",x0+u*3+4,by,u*3,bH,"APOSTAR",{col:"#2f9a4a",fg:"#fff",off:!ok,key:" ",sz:port?6:7});fBtn("mentira",x0+u*6+8,by,u*2.2,bH,"¡MENTIRA!",{col:"#e0301f",fg:"#fff",off:!g.bid,sz:port?5:6});fBtn("justo",x0+u*8.2+12,by,u*1.8,bH,"¡JUSTO!",{col:"#e9b949",off:!g.bid,sz:port?5:6});
+     txt(ok?`Vas a decir: ${dadTxt(S)}`:"Tiene que ser más que la anterior",cx,r1-5,ok?"#f5d142":"#e0552b",6,"center",null,9);}}
+};
+FERIA.order.push("dados");
+// ---- Gancho de feria: máquina de peluches con física ----
+// Mundo: x (izquierda→derecha) y z (delante→fondo) entre 0 y 1, y altura y. El hueco del premio está delante a la izquierda.
+// Se mueve el gancho a lo largo (mantén ▶) y luego al fondo (mantén ▲); al soltar baja solo. Agarra mejor cuanto más centrado caiga.
+// Los peluches son esferas con gravedad, choques entre ellos, con las paredes y con las uñas del gancho: se pueden empujar al hueco.
+const GAN={pitX:.2,pitZ:.26,pitH:.2,home:[.1,.13],rail:1.02,g:2.6,cost:10,hold:{n:.8,r:.55},time:15};
+function ganNew(g){const P=feriaPool("n"),R=feriaPool("r"),sp=[0,1,2,3,4].map(()=>pick(P)),r=srand((rnd()*1e9)|0);g.pl=[];
+  for(let i=0;i<15;i++){const rar=i<2,rad=rar?.105:.085+r()*.012;let x,z;do{x=.08+r()*.84;z=.08+r()*.84;}while(x<GAN.pitX+.12&&z<GAN.pitZ+.12);
+    g.pl.push({x,z,y:.3+i*.12,vx:0,vy:0,vz:0,r:rad,sp:rar?pick(R):sp[i%5],rar,gr:false,out:false,rot:(r()-.5)*.6});}
+  for(let i=0;i<600;i++)ganPhys(g,1/120);}
+function ganPhys(g,dt){const C=g.claw,T=ganTips(C);
+  for(const p of g.pl){if(p.out)continue;if(p.gr){const sw=C.sw||0;p.x=C.x+sw*.5;p.z=C.z;p.y=C.y-.02-p.r;p.vx=p.vy=p.vz=0;continue;}
+    p.vy-=GAN.g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;const inPit=p.x<GAN.pitX&&p.z<GAN.pitZ;
+    if(!inPit&&p.y<p.r){p.y=p.r;p.vy=-p.vy*.15;p.vx*=.86;p.vz*=.86;}
+    if(inPit&&p.y<-p.r*1.2){p.out=true;g.won.push(p);continue;}
+    // paredes de la urna
+    if(p.x<p.r){p.x=p.r;p.vx=Math.abs(p.vx)*.3;}if(p.x>1-p.r){p.x=1-p.r;p.vx=-Math.abs(p.vx)*.3;}if(p.z<p.r){p.z=p.r;p.vz=Math.abs(p.vz)*.3;}if(p.z>1-p.r){p.z=1-p.r;p.vz=-Math.abs(p.vz)*.3;}
+    // paredes del hueco (metacrilato hasta pitH): por fuera empujan; por encima se cae dentro
+    if(!inPit&&p.y<GAN.pitH+p.r*.4){const dx=p.x-GAN.pitX,dz=p.z-GAN.pitZ;if(dx<p.r&&dz<p.r){if(dx>dz){if(dx<p.r){p.x=GAN.pitX+p.r;p.vx=Math.abs(p.vx)*.2;}}else if(dz<p.r){p.z=GAN.pitZ+p.r;p.vz=Math.abs(p.vz)*.2;}}}
+    // uñas del gancho
+    if(p!==g.cand)for(const t of T){const dx=p.x-t[0],dy=p.y-t[1],dz=p.z-t[2],d=Math.hypot(dx,dy,dz),m=p.r+.022;if(d<m&&d>1e-6){const k=(m-d)/d;p.x+=dx*k;p.z+=dz*k;p.vx+=dx*k*3;p.vz+=dz*k*3;}}
+    // la cabeza del gancho es sólida: el peluche no se cuela por arriba
+    if(C.y<GAN.rail-.05&&Math.hypot(p.x-C.x,p.z-C.z)<.05+p.r*.6&&p.y+p.r>C.y-.02&&p.y<C.y){p.y=C.y-.02-p.r;if(p.vy>0)p.vy=0;}
+    p.vx*=.995;p.vz*=.995;}
+  // choques entre peluches
+  const L=g.pl.filter(p=>!p.out);for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j],dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z,d=Math.hypot(dx,dy,dz),m=a.r+b.r;
+    if(d<m&&d>1e-6){const k=(m-d)/d*.5,ia=a.gr?0:1,ib=b.gr?0:1,s=ia+ib||1;a.x-=dx*k*ia*2/s;a.y-=dy*k*ia*2/s;a.z-=dz*k*ia*2/s;b.x+=dx*k*ib*2/s;b.y+=dy*k*ib*2/s;b.z+=dz*k*ib*2/s;
+      const rv=(b.vx-a.vx)*dx+(b.vy-a.vy)*dy+(b.vz-a.vz)*dz;if(rv<0){const im=rv/(d*d)*.6;if(ia){a.vx+=dx*im;a.vy+=dy*im;a.vz+=dz*im;}if(ib){b.vx-=dx*im;b.vy-=dy*im;b.vz-=dz*im;}}}}}
+// Puntas de las tres uñas (abren con C.op)
+function ganTips(C){const R=.035+.075*C.op,y=C.y-.11-.02*C.op;return[0,1,2].map(i=>{const a=i*2.094+.5;return[C.x+(C.sw||0)*.5+Math.cos(a)*R,y,C.z+Math.sin(a)*R];});}
+function ganCand(g){const C=g.claw;let best=null,bd=9;for(const p of g.pl){if(p.out)continue;const d=Math.hypot(p.x-C.x,p.z-C.z);if(d<p.r*1.05&&Math.abs(p.y+p.r-(C.y-.02))<.06&&d<bd){bd=d;best=p;}}
+  if(!best)return null;const q=1-bd/(best.r*1.05);if(q<.25)return null;g.q=q;return best;}
+// Al cerrar: si el candidato sigue entre las uñas, queda agarrado con una fuerza que depende de lo centrado que cayó
+function ganGrab(g){const p=g.cand;g.cand=null;if(!p||p.out)return null;const C=g.claw;if(Math.hypot(p.x-C.x,p.z-C.z)>p.r*1.1)return null;p.gr=true;g.H=GAN.hold[p.rar?"r":"n"]*(.55+.45*g.q);return p;}
+FERIA.G.gancho={n:"Gancho de feria",d:"Máquina de peluches con física: lleva el gancho, céntralo y que no se escape.",min:GAN.cost,
+ ic(g){g.fillStyle="#e05a8a";g.fillRect(3,2,26,28);g.fillStyle="#bfe6f0";g.fillRect(6,6,20,16);g.fillStyle="#8a8f99";g.fillRect(15,6,2,6);g.fillRect(12,12,8,2);g.fillRect(12,14,1,3);g.fillRect(19,14,1,3);g.fillStyle="#f5c030";g.beginPath();g.arc(12,20,3,0,7);g.arc(20,19,3,0,7);g.fill();},
+ odds:[`Cada intento: ${GAN.cost} fichas. Tienes ${GAN.time} s para colocar el gancho.`,"Peluche normal: si el gancho cae centrado lo sujeta el 80 % del trayecto; descentrado, menos. Si cae al hueco, es tuyo.","Peluche raro (con estrella): agarre del 55 %; si lo sacas te llevas esa especie rara.","También vale empujar peluches al hueco con las uñas.",`Probabilidad medida de premio por intento: jugando al azar, alrededor de 1 de cada 9; apuntando bien, más de 1 de cada 4.`],
+ init(g){Object.assign(g,{claw:{x:GAN.home[0],z:GAN.home[1],y:GAN.rail,op:0,sw:0,vsw:0},ph:"ready",t:0,hold:null,moved:false,won:[],got:null,prizes:[],tries:0,wins:0,q:0,H:0,tm:0});ganNew(g);},
+ canExit(g){return g.ph==="ready";},exitLines(g){return g.prizes;},
+ btn(g,id){const d=FERIA.G.gancho;if(id==="coin"&&g.ph==="ready"){if(!feriaPay(GAN.cost,feriaSt().free>0)){fMsg(feriaWhyNot(GAN.cost),"#e0552b");return;}if(g.pl.filter(p=>!p.out).length<8)ganNew(g);g.ph="x";g.tm=GAN.time;g.moved=false;g.tries++;[660,880,1320].forEach((f,i)=>tone(f,.06,"square",.04,i*.06));}
+   else if(id==="mx"&&g.ph==="x"||id==="mz"&&g.ph==="z"){g.hold=id;g.moved=true;}},
+ key(g,k){if(k==="ArrowRight"&&g.ph==="x"||k==="ArrowUp"&&g.ph==="z"){g.hold=g.ph==="x"?"mx":"mz";g.moved=true;}else if((k===" "||k==="Enter")&&g.ph==="ready")FERIA.G.gancho.btn(g,"coin");},
+ keyup(g,k){if(k==="ArrowRight"||k==="ArrowUp")FERIA.G.gancho.release(g);},
+ pu(g){FERIA.G.gancho.release(g);},
+ release(g){if(!g.hold)return;g.hold=null;if(g.ph==="x"){g.ph="z";tone(500,.05,"square",.04);}else if(g.ph==="z"){g.ph="down";tone(400,.05,"square",.04);}},
+ up(g,dt){const C=g.claw,d=FERIA.G.gancho;g.t+=dt;
+   if(g.ph==="x"||g.ph==="z"){g.tm-=dt;if(g.hold==="mx"&&g.ph==="x"){C.x=Math.min(.94,C.x+.32*dt);C.vsw-=.6*dt;if(C.x>=.94)d.release(g);}if(g.hold==="mz"&&g.ph==="z"){C.z=Math.min(.92,C.z+.3*dt);if(C.z>=.92)d.release(g);}
+     if(g.tm<=0){g.hold=null;g.ph="down";fMsg("¡Tiempo!","#e0552b");}if((frame&15)===0&&g.hold)tone(90,.03,"sawtooth",.02);}
+   else if(g.ph==="down"){C.op=Math.min(1,C.op+dt*2.5);C.y-=.42*dt;const bot=C.y-.02;let hit=C.y-.13<.01;for(const p of g.pl)if(!p.out&&Math.hypot(p.x-C.x,p.z-C.z)<p.r*.75&&bot<p.y+p.r)hit=true;if(hit){g.ph="close";g.t=0;g.cand=ganCand(g);}if((frame&7)===0)tone(70,.04,"sawtooth",.015);}
+   else if(g.ph==="close"){C.op=Math.max(0,1-g.t*2);if(g.t>=.55){g.got=ganGrab(g);g.ph="up";g.t=0;tone(220,.08,"square",.04);}}
+   else if(g.ph==="up"){C.y=Math.min(GAN.rail,C.y+.36*dt);if(g.got&&rnd()<(1-g.H)*1.1*dt){d.slip(g);}if(C.y>=GAN.rail){g.ph="home";g.t=0;if(g.got&&rnd()<(1-g.H)*.45)d.slip(g);C.vsw+=.5;}}
+   else if(g.ph==="home"){const dx=GAN.home[0]-C.x,dz=GAN.home[1]-C.z,dd=Math.hypot(dx,dz),s=.3*dt;if(dd<=s){C.x=GAN.home[0];C.z=GAN.home[1];g.ph="drop";g.t=0;}else{C.x+=dx/dd*s;C.z+=dz/dd*s;C.vsw+=dx/dd*.4*dt;}if(g.got&&rnd()<(1-g.H)*.25*dt)d.slip(g);}
+   else if(g.ph==="drop"){C.op=Math.min(1,g.t*2.5);if(g.got&&g.t>.15)d.slip(g,true);if(g.t>1.6){C.op=Math.max(0,C.op);g.ph="ready";C.op=0;}}
+   // balanceo del gancho (muelle)
+   C.vsw+=(-C.sw*9-C.vsw*1.6)*dt;C.sw+=C.vsw*dt;
+   for(let i=0;i<4;i++)ganPhys(g,dt/4);
+   // premios
+   while(g.won.length){const p=g.won.shift();g.wins++;const t=feriaCre(p.rar?"r":"n",p.sp);g.prizes.push(t);fMsg(`¡Premio! ${DATA.sp[p.sp].n[0]}${p.rar?" ★":""}`,"#f5c030",2.5);SFX.evo();for(let i=0;i<40;i++)spawn(g.chX+(rnd()-.5)*20,g.chY,(rnd()-.5)*80,-40-rnd()*80,1.2,["#f5c030","#fff","#e05a8a"][i%3],2,160);save();}},
+ slip(g,drop){const p=g.got;if(!p)return;p.gr=false;p.vx=(g.claw.vsw||0)*.3;p.vy=-.1;g.got=null;if(!drop){fMsg(pick(["¡Se escurre!","¡Casi!","¡Uyyy!"]),"#e0552b",1.2);tone(300,.2,"triangle",.04,0,150);}},
+ dr(g){const C=g.claw;ctx.drawImage(feriaBarBg(),0,0);fR("rgba(10,8,14,.35)",0,0,W,H);
+   const port=H>W,mw=Math.round(port?W-12:Math.min(W*.5,300)),mx=Math.round(W/2-mw/2),my=Math.round(port?SAFE.t+22:6),mh=Math.round(port?H-my-SAFE.b-8:H-12);
+   // mueble
+   fR("rgba(0,0,0,.4)",mx+6,my+8,mw,mh);const bg=ctx.createLinearGradient(mx,0,mx+mw,0);bg.addColorStop(0,"#8a2a52");bg.addColorStop(.5,"#e05a8a");bg.addColorStop(1,"#8a2a52");ctx.fillStyle=bg;ctx.fillRect(mx,my,mw,mh);fR("#f7a8c8",mx,my,mw,2);
+   const mq=Math.round(mh*.1);fR("#1d1b26",mx+5,my+4,mw-10,mq);const nb=Math.floor((mw-14)/7);for(let i=0;i<nb;i++){const on=((i+Math.floor(g.t*6))%4)<2;fR(on?"#fff6c0":"#6b5a2a",mx+8+i*7,my+6,3,2);fR(on?"#fff6c0":"#6b5a2a",mx+8+i*7,my+mq,3,2);}
+   feriaNeon("EL GANCHO",W/2,my+4+mq*.62,"#6ad1c4",port?10:12);
+   // urna en perspectiva
+   const gw=mw-24,gx=mx+12,dP=Math.round(gw*(port?.45:.32)),gy=my+mq+10,fF=gy+Math.round((mh-mq-10)*(port?.7:.72)),SZ=z=>gw*(1-.22*z),yf=Math.max(.5,(fF-gy-dP-8)/(GAN.rail+.06)/(gw*.78));
+   const P=(x,y,z)=>[W/2+(x-.5)*SZ(z),fF-z*dP-y*SZ(z)*yf];
+   fR("#1a1d2a",gx,gy,gw,fF-gy+4);// fondo
+   const back=P(0,GAN.rail+.06,1),back2=P(1,0,1);const bw=ctx.createLinearGradient(0,back[1],0,back2[1]);bw.addColorStop(0,"#2a3150");bw.addColorStop(1,"#3a4a7a");ctx.fillStyle=bw;ctx.fillRect(back[0],back[1],back2[0]-back[0],back2[1]-back[1]);
+   for(let i=0;i<6;i++){const a=P(i/5,0,1),b=P(i/5,GAN.rail,1);fR("rgba(255,255,255,.04)",a[0],b[1],1,a[1]-b[1]);}
+   // suelo
+   ctx.fillStyle="#4a2a5a";ctx.beginPath();[P(0,0,0),P(1,0,0),P(1,0,1),P(0,0,1)].forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.fill();
+   for(let i=1;i<8;i++){const a=P(0,0,i/8),b=P(1,0,i/8);fR("rgba(0,0,0,.12)",a[0],a[1],b[0]-a[0],1);}
+   // hueco del premio
+   ctx.fillStyle="#0d0b12";ctx.beginPath();[P(0,0,0),P(GAN.pitX,0,0),P(GAN.pitX,0,GAN.pitZ),P(0,0,GAN.pitZ)].forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.fill();
+   const pw=(x1,z1,x2,z2)=>{const a=P(x1,0,z1),b=P(x2,0,z2),c=P(x2,GAN.pitH,z2),e=P(x1,GAN.pitH,z1);ctx.fillStyle="rgba(180,230,255,.18)";ctx.beginPath();[a,b,c,e].forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.fill();ctx.strokeStyle="rgba(220,245,255,.5)";ctx.beginPath();ctx.moveTo(e[0],e[1]);ctx.lineTo(c[0],c[1]);ctx.stroke();};
+   pw(0,GAN.pitZ,GAN.pitX,GAN.pitZ);pw(GAN.pitX,0,GAN.pitX,GAN.pitZ);
+   // sombra del gancho en el suelo (ayuda a calcular el fondo)
+   const sp0=P(C.x,0,C.z);ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.ellipse(sp0[0],sp0[1],SZ(C.z)*.06,SZ(C.z)*.02,0,0,7);ctx.fill();
+   // peluches y gancho ordenados por profundidad
+   const L=g.pl.filter(p=>!p.out).map(p=>({z:p.z,p}));L.push({z:C.z-.001,c:1});L.sort((a,b)=>b.z-a.z);
+   for(const o of L){if(o.c){// gancho: carro en el riel, cable y uñas
+       const top=P(C.x,GAN.rail,C.z),hd=P(C.x+C.sw*.5,C.y,C.z),s=SZ(C.z);fR("#8a8f99",P(0,GAN.rail,C.z)[0],top[1]-2,P(1,GAN.rail,C.z)[0]-P(0,GAN.rail,C.z)[0],3);fR("#c9ced8",top[0]-s*.05,top[1]-5,s*.1,6);
+       ctx.strokeStyle="#c9ced8";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(top[0],top[1]);ctx.lineTo(hd[0],hd[1]);ctx.stroke();
+       const hw=s*.05;fR("#5a6070",hd[0]-hw,hd[1]-2,hw*2,s*.04);fR("#e8ecf2",hd[0]-hw,hd[1]-2,hw*2,1);
+       ganTips(C).forEach(t=>{const q=P(t[0],t[1],t[2]),m=P((t[0]+C.x+C.sw*.5)/2+(t[0]-C.x)*.5,C.y-.06,(t[2]+C.z)/2+(t[2]-C.z)*.2);ctx.strokeStyle="#aeb6c2";ctx.lineWidth=Math.max(1,s*.012);ctx.beginPath();ctx.moveTo(hd[0],hd[1]+s*.03);ctx.lineTo(m[0],m[1]);ctx.lineTo(q[0],q[1]);ctx.stroke();});ctx.lineWidth=1;continue;}
+     const p=o.p,q=P(p.x,p.y,p.z),s=SZ(p.z),rr=p.r*s,fl=P(p.x,0,p.z);if(!(p.x<GAN.pitX&&p.z<GAN.pitZ)){ctx.fillStyle="rgba(0,0,0,.28)";ctx.beginPath();ctx.ellipse(fl[0],fl[1],rr*.9,rr*.3,0,0,7);ctx.fill();}
+     const d=DATA.sp[p.sp],im=formImg(d.f[0],d.t,false,32,0),z2=Math.round(rr*2.4);ctx.save();ctx.translate(q[0],q[1]);ctx.rotate(p.rot);ctx.fillStyle=p.rar?"rgba(245,192,48,.35)":"rgba(255,255,255,.12)";ctx.beginPath();ctx.arc(0,0,rr*1.02,0,7);ctx.fill();ctx.drawImage(im,-z2/2,-z2/2-rr*.1,z2,z2);ctx.restore();
+     if(p.rar&&(frame>>3)%3)txt("★",q[0]+rr*.7,q[1]-rr*.6,"#f5d142",5,"center",null,8);}
+   // cristal
+   const gl=ctx.createLinearGradient(gx,gy,gx+gw,fF);gl.addColorStop(0,"rgba(255,255,255,.12)");gl.addColorStop(.3,"rgba(255,255,255,0)");gl.addColorStop(.55,"rgba(255,255,255,.07)");gl.addColorStop(.62,"rgba(255,255,255,0)");ctx.fillStyle=gl;ctx.fillRect(gx,gy,gw,fF-gy+4);
+   fR("#c9ced8",gx-2,gy-2,gw+4,2);fR("#c9ced8",gx-2,gy,2,fF-gy+4);fR("#c9ced8",gx+gw,gy,2,fF-gy+4);
+   // panel de mandos
+   let y=fF+8;fR("#1d1b26",mx+8,y-2,mw-16,mh-(y-my)-6);fR("#3a3846",mx+8,y-2,mw-16,1);g.chX=mx+30;g.chY=y+8;
+   const led=(lab,v,x,w)=>{fR("#0a0a0e",x,y,w,16);txt(lab,x+w/2,y+6,"#9a5a50",4,"center","none",7);txt(v,x+w/2,y+14,"#ff3b2a",7,"center","none",10);};
+   led("TIEMPO",g.ph==="x"||g.ph==="z"?String(Math.ceil(g.tm)).padStart(2,"0"):"--",mx+14,40);led("CRÉDITO",String(S.fichas).padStart(5,"0"),W/2-24,48);led("PREMIOS",String(g.wins),mx+mw-54,40);y+=22;
+   const bh=Math.max(16,Math.min(26,Math.round((mh-(y-my))*.4))),bw2=(mw-36)/3;
+   fBtn("mx",mx+12,y,bw2,bh,"▶",{col:g.ph==="x"?"#f5c030":"#6b6f7e",off:g.ph!=="x",lit:g.ph==="x"&&!g.hold,sz:10,key:"ArrowRight"});
+   fBtn("mz",mx+18+bw2,y,bw2,bh,"▲",{col:g.ph==="z"?"#f5c030":"#6b6f7e",off:g.ph!=="z",lit:g.ph==="z"&&!g.hold,sz:10,key:"ArrowUp"});
+   const F=feriaSt();fBtn("coin",mx+24+bw2*2,y,bw2,bh,F.free>0?"GRATIS":`${GAN.cost} FICHAS`,{col:"#2f9a4a",fg:"#fff",off:g.ph!=="ready",lit:g.ph==="ready",sz:port?6:7});
+   y+=bh+10;const hint=g.ph==="ready"?"Echa una moneda":g.ph==="x"?"Mantén ▶ para llevarlo a la derecha y suelta":g.ph==="z"?"Mantén ▲ para llevarlo al fondo y suelta: baja solo":g.ph==="down"||g.ph==="close"?"Bajando…":g.got?"¡Lo lleva!":"…";
+   txt(hint,W/2,Math.min(y,my+mh-8),"#efe3c8",6,"center",null,9);
+   if(!port&&mx>110){const px=mx+mw+14,pw2=Math.min(W-px-10,150);fR("rgba(29,27,38,.85)",px,my+20,pw2,96);txt("CÓMO SE JUEGA",px+pw2/2,my+32,"#6ad1c4",6,"center",null,10);
+     ["▶ mueve a lo largo","▲ mueve al fondo","Mira la sombra del gancho","Centrado agarra más fuerte","Empujar al hueco también vale"].forEach((s,i)=>txt(s,px+6,my+46+i*14,"#efe3c8",5,"left","none",9));}}
+};
+FERIA.order.push("gancho");
 $("bSnd").textContent=AU.on?"♪":"✕♪";
 window.G={get E(){return E;},get ROAM(){return ROAM;},get MG2(){return MG2;},get W(){return W;},get H(){return H;},get F(){return{FX0,FX1,FY0,FY1,GCX,MIDY};},get S(){return S;},get M(){return M;},get scene(){return scene;},set HALF(v){HALF=v;},P,DATA,newGame,startMatchFlow,zoneTeam,buildTeam,newCre,addCre,say,testAct,startRecruit};
 // Los sprites PixelLab se decodifican antes del primer dibujo (formImg, human e itemImg los usan de forma síncrona y cachean).
