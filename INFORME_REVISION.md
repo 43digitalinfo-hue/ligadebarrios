@@ -166,6 +166,44 @@ Probado con un jugador automático que usa el joystick y los botones táctiles (
   - Caras suavizadas con marco de color.
   - Bocadillos, lances y tanteo redondeados; las piedras del tanteo son redondas.
 
+## Undécima tanda: estética de píxeles de las portátiles clásicas
+
+- **Todo se dibuja en píxeles:**
+  - Las escenas que iban en la capa nítida de alta resolución (minijuegos, fichaje, feria y avisos del partido) ahora se pintan en el lienzo pequeño del juego. Se amplían sin suavizar, igual que el mapa y el partido.
+  - Todo el juego comparte el mismo tamaño de píxel.
+  - El parámetro `?hd` recupera la capa nítida, por si hace falta comparar.
+- **Volumen al estilo del pixel art:**
+  - Los degradados se pintan en franjas de color planas.
+  - Las sombras son duras y desplazadas, sin difuminado.
+  - Las sombras de contacto son óvalos planos.
+  - El ruido de las texturas va en píxeles sueltos.
+- **Sprites recortados:** las criaturas se dibujan sin bordes semitransparentes, tanto en el lienzo como en los menús. En los menús ya no se suavizan.
+- **Letra de píxeles en todo el juego:**
+  - Pixelify Sans va incrustada en el archivo, así que no depende de la red.
+  - El tamaño se redondea para que cada píxel de la letra caiga en píxeles enteros de la pantalla.
+  - Los textos del lienzo llevan contorno y sombra de un píxel. Los rótulos grandes llevan contorno doble y brillo.
+- **Fichaje como un combate clásico:**
+  - Ficha de la criatura en caja crema con borde oscuro: nombre, nivel, tipo, barra de confianza en verde, amarillo o rojo y casillas de paciencia.
+  - Ficha tuya con los 8 huecos de la plantilla.
+  - Bocadillo de diálogo con borde de píxel.
+  - El jugador de espaldas y la criatura van a escala entera de píxel.
+  - Menú de colores: rojo para ganarse su confianza, ámbar para la captura y azul para huir. En horizontal, los tres van en una fila.
+- **Interfaz:**
+  - Ventanas azules con marco doble claro y oscuro, y caja de diálogo blanca con marco doble y texto gris con sombra.
+  - Botones planos con relieve de píxel y sombra dura.
+  - Barras planas (verde la de vida, azul la de experiencia) y título con contorno grueso.
+  - Fondo de los menús en damero suave.
+  - Cartel del barrio en caja crema.
+- **Música de chip:**
+  - La banda sonora adaptativa sigue con los mismos temas y cambios de tensión, pero ahora con los timbres de las portátiles.
+  - Melodías y acordes en ondas de pulso (12,5 %, 25 % y 50 %), con vibrato en las notas largas.
+  - Bajo de onda triangular y percusión de ruido.
+  - Eco corto en vez de reverb larga.
+- **Pruebas:**
+  - Sin errores en la consola en los recorridos de móvil vertical, móvil horizontal y ordenador: portada, mapa, menú, diálogo, fichaje, contrato, partido, los 24 minijuegos (lógica y dibujo) y los 7 juegos de la feria.
+  - 100 partidos simulados en modo prueba (4,3 goles de media).
+  - La música se ha comprobado midiendo niveles y espectros de una renderización sin conexión, no escuchándola.
+
 ## Error corregido: el juego se congelaba tras ganar a Retuerto
 
 - **Causa:** la animación de la insignia usaba las rayas de velocidad de la pantalla de tiro, y estas leían el reloj del tiro (`CS.t`). Fuera de un tiro `CS` está vacío, así que el dibujo fallaba en cada fotograma. La animación nunca terminaba y el juego se quedaba en negro. Pasaba con la primera insignia (Retuerto) y habría pasado con todas.

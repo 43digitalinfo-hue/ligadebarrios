@@ -14,6 +14,7 @@ Defendiendo, ★ busca un corte con la supertécnica del defensor. Cerca de tu �
 
 - `?debug`: activa el Modo prueba (toca 5 veces el título) y expone `window.G` para depurar. Sin este parámetro no están disponibles.
 - `?hora=N`: fuerza la hora del día (0-23) para probar la luz, el cielo y los focos.
+- `?hd`: dibuja los minijuegos, el fichaje y la feria en alta resolución en vez de en píxeles.
 - `?nofx`: desactiva el postproceso WebGL. En móviles lentos se desactiva solo ("Modo fluido").
 
 ## Entrenamientos
@@ -29,11 +30,14 @@ tragaperras de bar, mus con órdago, dados del mentiroso, gancho de feria, sokat
 
 Los 24 minijuegos de los barrios comparten una capa común: cuenta atrás 3-2-1, puntos flotantes, rachas, sacudida al fallar,
 medalla en directo y aviso en los últimos segundos. Todos tienen escenario y animaciones propias.
-Se dibujan en HD a la resolución real de la pantalla, con escenarios redondeados y texturas, personajes vectoriales
-y criaturas escaladas con Scale2x.
+Todo el juego tiene la estética de píxeles de las portátiles clásicas:
+- Se dibuja en un lienzo pequeño que se amplía sin suavizar, con degradados en franjas y sombras duras.
+- La letra de píxeles va incrustada.
+- Los fichajes se presentan como un combate clásico.
 
-La música es generativa (Web Audio) y cambia según el momento: calma en el barrio, curiosidad al fichar, tensión creciente en el partido,
-tristeza en la derrota y euforia en la victoria. Suena baja para acompañar sin tapar.
+La música es de chip y generativa (Web Audio): ondas de pulso, bajo triangular y percusión de ruido. Cambia según el momento:
+calma en el barrio, curiosidad al fichar, tensión creciente en el partido, tristeza en la derrota y euforia en la victoria.
+Suena baja para acompañar sin tapar.
 
 ## Contenido
 
